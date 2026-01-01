@@ -1,0 +1,38 @@
+[tool.poetry]
+name = "finalproject--zhukova-dpo-nod"
+version = "0.1.0"
+description = ""
+authors = ["Daria Zhukova <isaevadv@gmail.com>"]
+readme = "README.md"
+
+packages = [
+    { include = "valutatrade_hub" },
+]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+prompt = "^0.4.1"
+prettytable = "<3.10"
+
+[tool.poetry.scripts]
+project = "main:main"
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+exclude = ["venv", ".venv", "dist", "__pycache__"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+ignore = [] 
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[dependency-groups]
+dev = [
+    "ruff (>=0.14.3,<0.15.0)"
+]
+
+
