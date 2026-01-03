@@ -1,6 +1,6 @@
 from datetime import datetime
-from models import User, Portfolio
-from utils import load_json, save_json
+from valutatrade_hub.core.models import User, Portfolio
+from valutatrade_hub.core.utils import load_json, save_json
 
 def register_command(username: str, password: str):
     """
