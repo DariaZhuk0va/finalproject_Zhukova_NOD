@@ -109,4 +109,64 @@ class User:
             "registration_date": self._registration_date.isoformat()
         }
     
+class Wallet:
+    """Кошелёк пользователя для одной валюты"""
+    
+    def __init__(self, currency_code: str, balance: float = 0.0):
+        """
+        Создание кошелька
+        
+        Args:
+            currency_code: Код валюты (например, "USD", "BTC")
+            balance: Начальный баланс (по умолчанию 0.0)
+        """
+        self.currency_code = currency_code
+        self._balance = balance
+    
+    @property
+    def balance(self) -> float:
+        """Получить текущий баланс"""
+        return self._balance
+    
+    @balance.setter
+    def balance(self, value: float):
+        """Установить баланс (запрещает отрицательные значения)"""
+        if not isinstance(value, (int, float)):
+            raise TypeError("Баланс должен быть числом")
+        if value < 0:
+            raise ValueError("Баланс не может быть отрицательным")
+        self._balance = value
+    
+    def deposit(self, amount: float) -> None:
+        """Пополнение баланса"""
+        if not isinstance(amount, (int, float)):
+            raise TypeError("Сумма должна быть числом")
+        if amount <= 0:
+            raise ValueError("Сумма пополнения должна быть положительной")
+        self.balance += amount
+    
+    def withdraw(self, amount: float) -> None:
+        """Снятие средств"""
+        if not isinstance(amount, (int, float)):
+            raise TypeError("Сумма должна быть числом")
+        if amount <= 0:
+            raise ValueError("Сумма снятия должна быть положительной")
+        if amount > self.balance:
+            raise ValueError("Недостаточно средств на балансе")
+        self.balance -= amount
+    
+    def get_balance_info(self) -> None:
+        """Вывод информации о текущем балансе"""
+        print(f"Валюта: {self.currency_code}")
+        print(f"Баланс: {self.balance:.2f}")
+    
+    def to_dict(self) -> dict:
+        """Конвертирует кошелёк в словарь для JSON"""
+        return {
+            "currency_code": self.currency_code,
+            "balance": self.balance
+        }
+    
+    
+    
     
