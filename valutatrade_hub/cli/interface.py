@@ -1,5 +1,10 @@
 from datetime import datetime
-from valutatrade_hub.core.models import User, Portfolio
+from valutatrade_hub.core.models import (
+    User,
+    Portfolio,
+    Wallet
+)
+                                         
 from valutatrade_hub.core.utils import load_json, save_json
 from valutatrade_hub.core.constants import (
     RATES_FILE,
@@ -188,3 +193,100 @@ def show_portfolio_command(session_data, base_currency: str = "USD"):
     lines.append(f"ИТОГО: {total:,.2f} {base_currency}")
     
     return True, "\n".join(lines)
+
+def buy_command(session_data, currency: str, amount: float):
+    """
+    Минимальная версия команды покупки
+    """
+    # 1. Проверка, что пользователь залогинен
+    
+    if not session_data:
+        return False, "Сначала выполните login"
+    
+    user_id = session_data.get("user_id")
+    username = session_data.get("username")
+    
+    # 2. Валидация суммы
+    if not isinstance(amount, (int, float)):
+        return False, "'amount' должен быть числом"
+    
+    if amount <= 0:
+        return False, "'amount' должен быть положительным числом"
+    
+    # 3. Валидация валюты
+    currency = currency.upper().strip()
+    if not currency:
+        return False, "Код валюты не может быть пустым"
+    
+    # 4. Получение курса
+    rates = load_json(RATES_FILE)
+    rate_key = f"{currency}_USD"
+    
+    if rate_key not in rates:
+        return False, f"Не удалось получить курс для {currency}→USD"
+    
+    rate_data = rates[rate_key]
+    if not isinstance(rate_data, dict) or "rate" not in rate_data:
+        return False, f"Не удалось получить курс для {currency}→USD"
+    
+    rate = rate_data.get("rate", 0)
+    if rate <= 0:
+        return False, f"Не удалось получить курс для {currency}→USD"
+    
+    # 5. Расчет стоимости
+    cost_usd = amount * rate
+    
+    # 6. Проверка и обновление портфеля
+    portfolios = load_json(PORTFOLIOS_FILE)
+    
+    # Ищем портфель пользователя
+    portfolio_data = None
+    portfolio_idx = -1
+    for i, p in enumerate(portfolios):
+        if p["user_id"] == user_id:
+            portfolio_data = p
+            portfolio_idx = i
+            break
+    
+    if not portfolio_data:
+        return False, "Портфель не найден"
+    
+    portfolio = Portfolio.from_dict(portfolio_data)
+
+    has_wallet = False
+    # Сохраняем старые значения
+    old_balance = 0
+    try:
+        old_balance = portfolio.get_wallet(currency).balance
+        has_wallet = True
+    except:
+        old_balance = 0
+        has_wallet = False
+
+    
+    # Выполняем покупку 
+    try:
+        
+        # Добавляем валюту
+        if not has_wallet:
+            portfolio.add_currency(currency, amount)
+        else:
+            wallet = portfolio.get_wallet(currency)
+            wallet.deposit(amount)
+        
+        # 12. Сохраняем
+        portfolios[portfolio_idx] = portfolio.to_dict()
+        save_json(PORTFOLIOS_FILE, portfolios)
+        
+        # 13. Формируем отчет
+        new_balance = portfolio.get_wallet(currency).balance
+        
+        return True, (
+            f"Покупка выполнена: {amount:.4f} {currency} по курсу {rate:.2f} USD/{currency}\n"
+            f"Изменения в портфеле:\n"
+            f"  - {currency}: было {old_balance:.4f} → стало {new_balance:.4f}\n"
+            f"Оценочная стоимость покупки: {cost_usd:,.2f} USD"
+        )
+    
+    except ValueError as e:
+        return False, str(e)

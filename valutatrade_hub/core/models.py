@@ -185,7 +185,7 @@ class Wallet:
 class Portfolio:
     """Управление всеми кошельками одного пользователя"""
     
-    def __init__(self, user_id: int):
+    def __init__(self, user_id: int, wallets: dict = None):
         """
         Создание портфеля
         
@@ -193,7 +193,7 @@ class Portfolio:
             user_id: Уникальный идентификатор пользователя
         """
         self._user_id = user_id
-        self._wallets = {}  # dict[str, Wallet]
+        self._wallets = wallets if wallets is not None else {}
         self._exchange_rates = self._load_exchange_rates()
     
     def _load_exchange_rates(self) -> dict:
@@ -294,4 +294,19 @@ class Portfolio:
             "user_id": self._user_id,
             "wallets": wallets_dict
         }
+    @classmethod
+    def from_dict(cls, data: dict):
+        """Создает Portfolio из словаря"""
+        user_id = data["user_id"]
+        wallets_data = data.get("wallets", {})
+        
+        wallets = {}
+        for currency_code, wallet_data in wallets_data.items():
+            wallet = Wallet(
+                currency_code = currency_code,
+                balance = wallet_data.get("balance", 0.0)
+            )
+            wallets[currency_code] = wallet
+        
+        return cls(user_id, wallets)
     

@@ -8,7 +8,8 @@ from .constants import COMMAND_POSITION, DATA_DIR
 from valutatrade_hub.cli.interface import (
     register_command,
     login_command,
-    show_portfolio_command
+    show_portfolio_command,
+    buy_command
 )
 
 def run():
@@ -72,6 +73,16 @@ def run():
                     else:
                         base = 'USD' 
                     port, message = show_portfolio_command(session_data, base,)
+                    print(message)
+                case "buy":
+                    BASE_POSITION = COMMAND_POSITION + 2
+                    AMOUNT_POSITION = COMMAND_POSITION + 4
+                    base = args[BASE_POSITION]
+                    try:
+                        amount = float(args[AMOUNT_POSITION])
+                    except:
+                        print("'amount' должен быть числом")
+                    buy_status, message = buy_command(session_data, base, amount)
                     print(message)
                 case _:
                     print(f"Функции '{command}' нет. Попробуйте снова.")
