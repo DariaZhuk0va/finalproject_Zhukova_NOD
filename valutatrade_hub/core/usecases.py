@@ -55,19 +55,27 @@ def run():
                     #print_help()
 
                 case "register":
-                    USERNAME_POSITION = COMMAND_POSITION + 2
-                    PASSWORD_POSITION = COMMAND_POSITION + 4
-                    username = args[USERNAME_POSITION]
-                    password = args[PASSWORD_POSITION]
-                    reg, message = register_command(username, password)
-                    print(message)  
+                    if len(args) == 5 and COMMAND_POSITION + 1 == '--username' and COMMAND_POSITION + 3 == '--password':
+                        USERNAME_POSITION = COMMAND_POSITION + 2
+                        PASSWORD_POSITION = COMMAND_POSITION + 4
+                        username = args[USERNAME_POSITION]
+                        password = args[PASSWORD_POSITION]
+                        reg, message = register_command(username, password)
+                        print(message)
+                    else:
+                        print('Неверный формат команды')
+                        print('Правильный формат: register --username <username> --password <password>')  
                 case "login":
-                    USERNAME_POSITION = COMMAND_POSITION + 2
-                    PASSWORD_POSITION = COMMAND_POSITION + 4
-                    username = args[USERNAME_POSITION]
-                    password = args[PASSWORD_POSITION]
-                    session_data, message = login_command(username, password)
-                    print(message)
+                    if len(args) == 5 and COMMAND_POSITION + 1 == '--username' and COMMAND_POSITION + 3 == '--password':
+                        USERNAME_POSITION = COMMAND_POSITION + 2
+                        PASSWORD_POSITION = COMMAND_POSITION + 4
+                        username = args[USERNAME_POSITION]
+                        password = args[PASSWORD_POSITION]
+                        session_data, message = login_command(username, password)
+                        print(message)
+                    else:
+                        print('Неверный формат команды')
+                        print('Правильный формат: login --username <username> --password <password>')      
                 case "logout":
                     print('Вы вышли из аккаунта') 
                     session_data = {}
@@ -80,32 +88,44 @@ def run():
                     port, message = show_portfolio_command(session_data, base,)
                     print(message)
                 case "buy":
-                    BASE_POSITION = COMMAND_POSITION + 2
-                    AMOUNT_POSITION = COMMAND_POSITION + 4
-                    base = args[BASE_POSITION]
-                    try:
-                        amount = float(args[AMOUNT_POSITION])
-                    except:
-                        print("'amount' должен быть числом")
-                    buy_status, message = buy_command(session_data, base, amount)
-                    print(message)
+                    if len(args) == 5 and COMMAND_POSITION + 1 == '--currency' and COMMAND_POSITION + 3 == '--amount':
+                        BASE_POSITION = COMMAND_POSITION + 2
+                        AMOUNT_POSITION = COMMAND_POSITION + 4
+                        base = args[BASE_POSITION]
+                        try:
+                            amount = float(args[AMOUNT_POSITION])
+                        except:
+                            print("'amount' должен быть числом")
+                        buy_status, message = buy_command(session_data, base, amount)
+                        print(message)
+                    else:
+                        print('Неверный формат команды')
+                        print('Правильный формат: buy --currency <currency> --amount <amount>')  
                 case "sell":
-                    BASE_POSITION = COMMAND_POSITION + 2
-                    AMOUNT_POSITION = COMMAND_POSITION + 4
-                    base = args[BASE_POSITION]
-                    try:
-                        amount = float(args[AMOUNT_POSITION])
-                    except:
-                        print("'amount' должен быть числом")
-                    sell_status, message = sell_command(session_data, base, amount)
-                    print(message)
+                    if len(args) == 5 and COMMAND_POSITION + 1 == '--currency' and COMMAND_POSITION + 3 == '--amount':
+                        BASE_POSITION = COMMAND_POSITION + 2
+                        AMOUNT_POSITION = COMMAND_POSITION + 4
+                        base = args[BASE_POSITION]
+                        try:
+                            amount = float(args[AMOUNT_POSITION])
+                        except:
+                            print("'amount' должен быть числом")
+                        sell_status, message = sell_command(session_data, base, amount)
+                        print(message)
+                    else:
+                        print('Неверный формат команды')
+                        print('Правильный формат: sell --currency <currency> --amount <amount>') 
                 case "get-rate":
-                    FROM_POSITION = COMMAND_POSITION + 2
-                    TO_POSITION = COMMAND_POSITION + 4
-                    from_rate = args[FROM_POSITION]
-                    to_rate = args[TO_POSITION]
-                    get_status, message = get_rate_command(from_rate, to_rate)
-                    print(message)
+                    if len(args) == 5 and COMMAND_POSITION + 1 == '--from' and COMMAND_POSITION + 3 == '--to':
+                        FROM_POSITION = COMMAND_POSITION + 2
+                        TO_POSITION = COMMAND_POSITION + 4
+                        from_rate = args[FROM_POSITION]
+                        to_rate = args[TO_POSITION]
+                        get_status, message = get_rate_command(from_rate, to_rate)
+                        print(message)
+                    else:
+                        print('Неверный формат команды')
+                        print('Правильный формат: get-rate --from <currency> --to <currency>') 
                 case _:
                     print(f"Функции '{command}' нет. Попробуйте снова.")
                     print("Введите 'help' для просмотра доступных команд.")
