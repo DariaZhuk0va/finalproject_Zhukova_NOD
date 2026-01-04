@@ -65,7 +65,10 @@ def run():
                     username = args[USERNAME_POSITION]
                     password = args[PASSWORD_POSITION]
                     session_data, message = login_command(username, password)
-                    print(message)                  
+                    print(message)
+                case "logout":
+                    print('Вы вышли из аккаунта') 
+                    session_data = {}
                 case "show-portfolio":
                     BASE_POSITION = COMMAND_POSITION + 1
                     if len(args) > 1:
