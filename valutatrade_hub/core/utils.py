@@ -63,3 +63,25 @@ def is_rate_fresh(updated_at: str, max_age_minutes: int = 5) -> bool:
     except (ValueError, TypeError):
         # Если время в неверном формате, считаем курс устаревшим
         return False
+
+def print_help():
+    """Показывает справку по командам системы управления портфелем."""
+    
+    print("\n***Система управления портфелем валют***")
+    
+    print("\n***Регистрация и авторизация***")
+    print("register --username <имя> --password <пароль> - регистрация пользователя, пароль должен быть не менее 4-х символов")
+    print("login --username <имя> --password <пароль> - вход в систему")
+    print("logout - выход из системы")
+    
+    print("\n***Управление портфелем***")
+    print("show-portfolio [--base <валюта>] - показать портфель (по умолчанию USD)")
+    print("buy --currency <валюта> --amount <количество> - купить валюту")
+    print("sell --currency <валюта> --amount <количество> - продать валюту")
+    
+    print("\n***Информация о курсах***")
+    print("get-rate --from <валюта> --to <валюта> - получить курс валют")
+    
+    print("\n***Общие команды***")
+    print("help - показать эту справку")
+    print("exit - выход из программы\n")

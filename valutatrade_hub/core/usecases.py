@@ -14,13 +14,17 @@ from valutatrade_hub.cli.interface import (
     get_rate_command
 )
 
+from valutatrade_hub.core.utils import (
+print_help
+)
+
 def run():
     """
     Главная функция с основным циклом программы.
     """
 
     print("Добро пожаловать на Платформу для отслеживания и симуляции торговли валютами!\n")
-    #print("Введите 'help' для просмотра доступных команд.")
+    print("Введите 'help' для просмотра доступных команд.")
     print("Введите 'exit' для выхода из программы.")
     
     session_data = {}
@@ -51,8 +55,8 @@ def run():
 
             match command:
 
-                #case "help":
-                    #print_help()
+                case "help":
+                    print_help()
 
                 case "register":
                     if len(args) == 5 and COMMAND_POSITION + 1 == '--username' and COMMAND_POSITION + 3 == '--password':
