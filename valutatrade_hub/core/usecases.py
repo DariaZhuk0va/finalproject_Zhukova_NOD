@@ -7,7 +7,8 @@ from .constants import COMMAND_POSITION, DATA_DIR
 
 from valutatrade_hub.cli.interface import (
     register_command,
-    login_command
+    login_command,
+    show_portfolio_command
 )
 
 def run():
@@ -19,8 +20,10 @@ def run():
     #print("Введите 'help' для просмотра доступных команд.")
     print("Введите 'exit' для выхода из программы.")
     
+    session_data = {}
+
     while True:
-        session_data = {}
+        
         try:
 
             user_input = prompt.string("\n>>>Введите команду: ").strip()
@@ -62,7 +65,14 @@ def run():
                     password = args[PASSWORD_POSITION]
                     session_data, message = login_command(username, password)
                     print(message)                  
-
+                case "show-portfolio":
+                    BASE_POSITION = COMMAND_POSITION + 1
+                    if len(args) > 1:
+                        base = args[BASE_POSITION]
+                    else:
+                        base = 'USD' 
+                    port, message = show_portfolio_command(session_data, base,)
+                    print(message)
                 case _:
                     print(f"Функции '{command}' нет. Попробуйте снова.")
                     print("Введите 'help' для просмотра доступных команд.")
