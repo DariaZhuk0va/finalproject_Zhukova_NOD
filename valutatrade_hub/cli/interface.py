@@ -5,7 +5,11 @@ from valutatrade_hub.core.models import (
     Wallet
 )
                                          
-from valutatrade_hub.core.utils import load_json, save_json
+from valutatrade_hub.core.utils import (
+    load_json,
+    save_json,
+    is_rate_fresh
+)
 from valutatrade_hub.core.constants import (
     RATES_FILE,
     USERS_FILE,
@@ -290,3 +294,197 @@ def buy_command(session_data, currency: str, amount: float):
     
     except ValueError as e:
         return False, str(e)
+    
+def sell_command(session_data, currency: str, amount: float):
+    """
+    Назначение: продать указанную валюту.
+    """
+    # Проверка, что пользователь залогинен
+    
+    if not session_data:
+        return False, "Сначала выполните login"
+    
+    user_id = session_data.get("user_id")
+    username = session_data.get("username")
+    
+    # Валидация суммы
+    if not isinstance(amount, (int, float)):
+        return False, "'amount' должен быть числом"
+    
+    if amount <= 0:
+        return False, "'amount' должен быть положительным числом"
+    
+    # Валидация валюты
+    currency = currency.upper().strip()
+    if not currency:
+        return False, "Код валюты не может быть пустым"
+    
+    # Получение курса
+    rates = load_json(RATES_FILE)
+    rate_key = f"{currency}_USD"
+    
+    if rate_key not in rates:
+        return False, f"Не удалось получить курс для {currency}→USD"
+    
+    rate_data = rates[rate_key]
+    if not isinstance(rate_data, dict) or "rate" not in rate_data:
+        return False, f"Не удалось получить курс для {currency}→USD"
+    
+    rate = rate_data.get("rate", 0)
+    if rate <= 0:
+        return False, f"Не удалось получить курс для {currency}→USD"
+    
+    # Расчет стоимости
+    cost_usd = amount * rate
+    
+    # Проверка и обновление портфеля
+    portfolios = load_json(PORTFOLIOS_FILE)
+    
+    # Ищем портфель пользователя
+    portfolio_data = None
+    portfolio_idx = -1
+    for i, p in enumerate(portfolios):
+        if p["user_id"] == user_id:
+            portfolio_data = p
+            portfolio_idx = i
+            break
+    
+    if not portfolio_data:
+        return False, "Портфель не найден"
+    
+    portfolio = Portfolio.from_dict(portfolio_data)
+
+    
+    # Получаем баланс
+    has_wallet = False
+    old_balance = 0
+    try:
+        old_balance = portfolio.get_wallet(currency).balance
+        has_wallet = True
+    except:
+        return False, f'У вас нет кошелька {currency}. Добавьте валюту: она создаётся автоматически при первой покупке'
+
+
+    # Выполняем продажу 
+    try:
+        wallet = portfolio.get_wallet(currency)
+        wallet.withdraw(amount)
+        
+        # Сохраняем
+        portfolios[portfolio_idx] = portfolio.to_dict()
+        save_json(PORTFOLIOS_FILE, portfolios)
+        
+        # Формируем отчет
+        new_balance = portfolio.get_wallet(currency).balance
+        
+        return True, (
+            f"Продажа выполнена: {amount:.4f} {currency} по курсу {rate:.2f} USD/{currency}\n"
+            f"Изменения в портфеле:\n"
+            f"  - {currency}: было {old_balance:.4f} → стало {new_balance:.4f}\n"
+            f"Оценочная выручка: {cost_usd:,.2f} USD"
+        )
+    
+    except ValueError as e:
+        return False, str(e)
+    
+def get_rate_command(from_currency: str, to_currency: str):
+    """
+    Назначение: получить текущий курс одной валюты к другой.
+    """
+    from_currency = from_currency.upper().strip()
+    to_currency = to_currency.upper().strip()
+    
+    if not from_currency or not to_currency:
+        return False, "Коды валют не могут быть пустыми"
+    
+    if from_currency == to_currency:
+        return True, f"Курс {from_currency}→{to_currency}: 1.0000 (одна и та же валюта)"
+    
+    # Загрузка текущих курсов
+    rates = load_json(RATES_FILE, default={})
+    
+    key = f"{from_currency}_{to_currency}"
+    reverse_key = f"{to_currency}_{from_currency}"
+    
+    # Проверяем свежесть курса
+    needs_update = False
+    rate_data = None
+    MAX_AGE_MINUTES = 5
+
+    if key in rates:
+        rate_data = rates[key]
+        if isinstance(rate_data, dict):
+            updated_at = rate_data.get("updated_at")
+            if not is_rate_fresh(updated_at, MAX_AGE_MINUTES):
+                needs_update = True
+    elif reverse_key in rates:
+        rate_data = rates[reverse_key]
+        if isinstance(rate_data, dict):
+            updated_at = rate_data.get("updated_at")
+            if not is_rate_fresh(updated_at, MAX_AGE_MINUTES):
+                needs_update = True
+    else:
+        needs_update = True
+    
+    # Обновляем курс если нужно
+    if needs_update:
+        print(f"Обновление курса {from_currency}→{to_currency}...")
+
+        # Заглушка для реального API вызова
+        if key in rates and isinstance(rates[key], dict):
+            rate = rates[key].get("rate")
+            updated_at = rates[key].get("updated_at")
+        elif reverse_key in rates and isinstance(rates[reverse_key], dict):
+            reverse_rate = rates[reverse_key].get("rate")
+            rate = 1 / reverse_rate if reverse_rate != 0 else 0
+            updated_at = rates[reverse_key].get("updated_at")
+        else:
+            return False, f"Курс {from_currency}→{to_currency} недоступен"
+        '''
+        # Обновляем кеш
+        if key not in rates:
+            rates[key] = {}
+        
+        if isinstance(rates[key], dict):
+            rates[key]["rate"] = new_rate
+            rates[key]["updated_at"] = new_updated_at
+        
+        # Обновляем last_refresh
+        rates["last_refresh"] = datetime.now().isoformat()
+        
+        # Сохраняем обновленные курсы
+        save_json(RATES_FILE, rates)
+        
+        rate = new_rate
+        updated_at = new_updated_at
+        source_info = " (только что обновлено)"
+'''
+    else:
+        # Используем существующий курс
+        if key in rates and isinstance(rates[key], dict):
+            rate = rates[key].get("rate")
+            updated_at = rates[key].get("updated_at")
+        elif reverse_key in rates and isinstance(rates[reverse_key], dict):
+            reverse_rate = rates[reverse_key].get("rate")
+            rate = 1 / reverse_rate if reverse_rate != 0 else 0
+            updated_at = rates[reverse_key].get("updated_at")
+        else:
+            return False, f"Курс {from_currency}→{to_currency} недоступен"
+        
+        source_info = ""
+    
+    # Форматируем результат
+    try:
+        dt = datetime.fromisoformat(updated_at.replace('Z', '+00:00'))
+        time_str = dt.strftime("%Y-%m-%d %H:%M:%S")
+    except:
+        time_str = str(updated_at)
+    
+    if rate:
+        reverse_rate = 1 / rate if rate != 0 else 0
+        message = f"Курс {from_currency}→{to_currency}: {rate:.8f}\n"
+        message += f"Обновлено: {time_str}\n"
+        message += f"Обратный курс {to_currency}→{from_currency}: {reverse_rate:.6f}"
+        return True, message
+    
+    return False, f"Курс {from_currency}→{to_currency} недоступен"

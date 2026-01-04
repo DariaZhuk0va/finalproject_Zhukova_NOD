@@ -9,7 +9,9 @@ from valutatrade_hub.cli.interface import (
     register_command,
     login_command,
     show_portfolio_command,
-    buy_command
+    buy_command,
+    sell_command,
+    get_rate_command
 )
 
 def run():
@@ -86,6 +88,23 @@ def run():
                     except:
                         print("'amount' должен быть числом")
                     buy_status, message = buy_command(session_data, base, amount)
+                    print(message)
+                case "sell":
+                    BASE_POSITION = COMMAND_POSITION + 2
+                    AMOUNT_POSITION = COMMAND_POSITION + 4
+                    base = args[BASE_POSITION]
+                    try:
+                        amount = float(args[AMOUNT_POSITION])
+                    except:
+                        print("'amount' должен быть числом")
+                    sell_status, message = sell_command(session_data, base, amount)
+                    print(message)
+                case "get-rate":
+                    FROM_POSITION = COMMAND_POSITION + 2
+                    TO_POSITION = COMMAND_POSITION + 4
+                    from_rate = args[FROM_POSITION]
+                    to_rate = args[TO_POSITION]
+                    get_status, message = get_rate_command(from_rate, to_rate)
                     print(message)
                 case _:
                     print(f"Функции '{command}' нет. Попробуйте снова.")

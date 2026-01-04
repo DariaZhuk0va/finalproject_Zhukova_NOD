@@ -167,7 +167,7 @@ class Wallet:
         if amount <= 0:
             raise ValueError("Сумма снятия должна быть положительной")
         if amount > self.balance:
-            raise ValueError("Недостаточно средств на балансе")
+            raise ValueError(f"Недостаточно средств: доступно {self.balance} {self.currency_code}, требуется {amount} {self.currency_code}")
         self.balance -= amount
     
     def get_balance_info(self) -> None:
