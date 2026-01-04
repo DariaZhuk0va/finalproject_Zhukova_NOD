@@ -61,3 +61,56 @@ def register_command(username: str, password: str):
         
     except Exception as e:
         return False, f"Ошибка при регистрации: {str(e)}"
+    
+def login_command(username: str, password: str):
+    """
+    Вход пользователя в систему
+    
+    Args:
+        username: Имя пользователя
+        password: Пароль
+    
+    Returns:
+        Кортеж (dict, сообщение)
+    """
+    # 1. Проверка входных данных
+    if not username or not username.strip():
+        return {}, "Имя пользователя не может быть пустым"
+    
+    if len(password) < 4:
+        return {}, "Пароль должен быть не короче 4 символов"
+    
+    # 2. Загрузка пользователей
+    users = load_json("users.json")
+    
+    # 3. Поиск пользователя по username
+    user_data = None
+    for user in users:
+        if user.get("username") == username:
+            user_data = user
+            break
+    
+    if not user_data:
+        return {}, f"Пользователь '{username}' не найден"
+    
+    # 4. Проверка пароля
+    try:
+        # Восстанавливаем пользователя из словаря
+        user = User.from_dict(user_data)
+        
+        # Проверяем пароль
+        if not user.verify_password(password):
+            return {}, "Неверный пароль"
+        
+        # 5. Сохранение сессии
+        session_data = {
+            "user_id": user.user_id,
+            "username": user.username,
+            "login_time": datetime.now().isoformat()
+        }
+        
+        # 6. Возврат сообщения об успехе
+        return session_data, f"Вы вошли как '{username}'"
+        
+    except Exception as e:
+        return False, f"Ошибка при входе: {str(e)}"

@@ -109,6 +109,21 @@ class User:
             "registration_date": self._registration_date.isoformat()
         }
     
+    @classmethod
+    def from_dict(cls, data: dict) -> 'User':
+        """Создать пользователя из словаря"""
+        # Создаем временный объект
+        user = cls.__new__(cls)
+    
+        # Устанавливаем атрибуты напрямую
+        user._user_id = data["user_id"]
+        user._username = data["username"]
+        user._hashed_password = data["hashed_password"]
+        user._salt = data["salt"]
+        user._registration_date = datetime.fromisoformat(data["registration_date"])
+    
+        return user
+    
 class Wallet:
     """Кошелёк пользователя для одной валюты"""
     

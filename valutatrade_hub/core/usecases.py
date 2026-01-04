@@ -6,7 +6,8 @@ import prompt
 from .constants import COMMAND_POSITION, DATA_DIR
 
 from valutatrade_hub.cli.interface import (
-    register_command
+    register_command,
+    login_command
 )
 
 def run():
@@ -19,7 +20,7 @@ def run():
     print("Введите 'exit' для выхода из программы.")
     
     while True:
-
+        session_data = {}
         try:
 
             user_input = prompt.string("\n>>>Введите команду: ").strip()
@@ -53,7 +54,14 @@ def run():
                     username = args[USERNAME_POSITION]
                     password = args[PASSWORD_POSITION]
                     reg, message = register_command(username, password)
-                    print(message)              
+                    print(message)  
+                case "login":
+                    USERNAME_POSITION = COMMAND_POSITION + 2
+                    PASSWORD_POSITION = COMMAND_POSITION + 4
+                    username = args[USERNAME_POSITION]
+                    password = args[PASSWORD_POSITION]
+                    session_data, message = login_command(username, password)
+                    print(message)                  
 
                 case _:
                     print(f"Функции '{command}' нет. Попробуйте снова.")
