@@ -3,19 +3,9 @@ from datetime import datetime
 import json
 import os
 
-from valutatrade_hub.core.constants import (
-    RATES_FILE,
-    USERS_FILE,
-    PORTFOLIOS_FILE
-)
+from valutatrade_hub.core.constants import *
 
-from valutatrade_hub.core.exceptions import (
-InsufficientFundsError,
-WalletNotFoundError,
-InvalidAmountError,
-InvalidName,
-InvalidPassword
-)
+from valutatrade_hub.core.exceptions import *
 
 class User:
     """Класс пользователя"""
@@ -216,8 +206,8 @@ class Portfolio:
     def _load_exchange_rates(self) -> dict:
         """Загружает курсы валют из файла data/rates.json"""
         
-        # Если файла нет, создаем с базовыми курсами
-        if not os.path.exists(RATES_FILE):
+        rates = db.load(RATES_FILE)
+        if not rates:
             default_rates = {
                             "EUR_USD": {
                             "rate": 1.0786,                  
@@ -238,20 +228,10 @@ class Portfolio:
                             "source": "ParserService",         
                             "last_refresh": "2025-10-09T10:35:00"  
                             } 
-            os.makedirs("data", exist_ok = True)
-            with open(RATES_FILE, 'w') as f:
-                json.dump(default_rates, f, indent = 2)
+            db.save(RATES_FILE, default_rates)
             print(f"Файл {RATES_FILE} не найден, создан с базовыми курсами")
             return default_rates
-        
-        # Загружаем курсы из файла
-        try:
-            with open(RATES_FILE, 'r') as f:
-                rates = json.load(f)
-            return rates
-        except Exception as e:
-            print(f"Ошибка загрузки курсов: {e}")
-            return {"USD": 1.0}
+        return rates
     
     @property
     def user_id(self) -> int:

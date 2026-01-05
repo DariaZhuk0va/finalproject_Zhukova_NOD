@@ -6,8 +6,6 @@ from valutatrade_hub.core.models import (
 )
                                          
 from valutatrade_hub.core.utils import (
-    load_json,
-    save_json,
     is_rate_fresh
 )
 from valutatrade_hub.core.constants import (
@@ -15,6 +13,8 @@ from valutatrade_hub.core.constants import (
     USERS_FILE,
     PORTFOLIOS_FILE
 )
+from valutatrade_hub.infra.database import db
+from valutatrade_hub.infra.settings import settings
 
 from valutatrade_hub.core.exceptions import (
 InvalidAmountError,
@@ -43,7 +43,7 @@ def register_command(username: str, password: str):
         return False, message
     
     # 2. Проверка уникальности username
-    users = load_json(USERS_FILE)
+    users = db.load(USERS_FILE)
     
     for user_data in users:
         if user_data.get("username") == username:
@@ -62,10 +62,10 @@ def register_command(username: str, password: str):
         
         # 5. Сохранение пользователя в users.json
         users.append(user.to_dict())
-        save_json(USERS_FILE, users)
+        db.save(USERS_FILE, users)
         
         # 6. Создание пустого портфеля
-        portfolios = load_json(PORTFOLIOS_FILE)
+        portfolios = db.load(PORTFOLIOS_FILE)
         
         # Проверяем, нет ли уже портфеля для этого пользователя
         portfolio_exists = any(p.get("user_id") == user_id for p in portfolios)
@@ -73,7 +73,7 @@ def register_command(username: str, password: str):
         if not portfolio_exists:
             portfolio = Portfolio(user_id)
             portfolios.append(portfolio.to_dict())
-            save_json(PORTFOLIOS_FILE, portfolios)
+            db.save(PORTFOLIOS_FILE, portfolios)
         
         # 7. Возврат сообщения об успехе
         message = (f"Пользователь '{username}' зарегистрирован (id={user_id}). "
@@ -105,7 +105,7 @@ def login_command(username: str, password: str):
         return {}, message
     
     # 2. Загрузка пользователей
-    users = load_json(USERS_FILE)
+    users = db.load(USERS_FILE)
     
     # 3. Поиск пользователя по username
     user_data = None
@@ -154,11 +154,14 @@ def show_portfolio_command(session_data, base_currency: str = "USD"):
     if not session_data:
         return False, "Сначала выполните login"
     
+    if base_currency is None:
+        base_currency = settings.get('DEFAULT_BASE_CURRENCY', 'USD')
+    
     user_id = session_data.get("user_id")
     username = session_data.get("username")
     
     # 2. Загрузка портфеля пользователя
-    portfolios = load_json(PORTFOLIOS_FILE)
+    portfolios = db.load(PORTFOLIOS_FILE)
     
     portfolio_data = None
     for portfolio in portfolios:
@@ -177,7 +180,7 @@ def show_portfolio_command(session_data, base_currency: str = "USD"):
     
     # 4. Загрузка курсов валют
     try:
-        exchange_rates = load_json(RATES_FILE)
+        exchange_rates = db.load(RATES_FILE)
         if not exchange_rates:
             return False, "Курсы валют не загружены"
     except:
@@ -234,7 +237,7 @@ def buy_command(session_data, currency: str, amount: float):
         return False, "Код валюты не может быть пустым"
     
     # 4. Получение курса
-    rates = load_json(RATES_FILE)
+    rates = db.load(RATES_FILE)
     rate_key = f"{currency}_USD"
     
     if rate_key not in rates:
@@ -252,7 +255,7 @@ def buy_command(session_data, currency: str, amount: float):
     cost_usd = amount * rate
     
     # 6. Проверка и обновление портфеля
-    portfolios = load_json(PORTFOLIOS_FILE)
+    portfolios = db.load(PORTFOLIOS_FILE)
     
     # Ищем портфель пользователя
     portfolio_data = None
@@ -291,7 +294,7 @@ def buy_command(session_data, currency: str, amount: float):
         
         # 12. Сохраняем
         portfolios[portfolio_idx] = portfolio.to_dict()
-        save_json(PORTFOLIOS_FILE, portfolios)
+        db.save(PORTFOLIOS_FILE, portfolios)
         
         # 13. Формируем отчет
         new_balance = portfolio.get_wallet(currency).balance
@@ -332,7 +335,7 @@ def sell_command(session_data, currency: str, amount: float):
         return False, "Код валюты не может быть пустым"
     
     # Получение курса
-    rates = load_json(RATES_FILE)
+    rates = db.load(RATES_FILE)
     rate_key = f"{currency}_USD"
     
     if rate_key not in rates:
@@ -350,7 +353,7 @@ def sell_command(session_data, currency: str, amount: float):
     cost_usd = amount * rate
     
     # Проверка и обновление портфеля
-    portfolios = load_json(PORTFOLIOS_FILE)
+    portfolios = db.load(PORTFOLIOS_FILE)
     
     # Ищем портфель пользователя
     portfolio_data = None
@@ -384,7 +387,7 @@ def sell_command(session_data, currency: str, amount: float):
         
         # Сохраняем
         portfolios[portfolio_idx] = portfolio.to_dict()
-        save_json(PORTFOLIOS_FILE, portfolios)
+        db.save(PORTFOLIOS_FILE, portfolios)
         
         # Формируем отчет
         new_balance = portfolio.get_wallet(currency).balance
@@ -413,7 +416,7 @@ def get_rate_command(from_currency: str, to_currency: str):
         return True, f"Курс {from_currency}→{to_currency}: 1.0000 (одна и та же валюта)"
     
     # Загрузка текущих курсов
-    rates = load_json(RATES_FILE, default={})
+    rates = db.load(RATES_FILE)
     
     key = f"{from_currency}_{to_currency}"
     reverse_key = f"{to_currency}_{from_currency}"
@@ -421,7 +424,7 @@ def get_rate_command(from_currency: str, to_currency: str):
     # Проверяем свежесть курса
     needs_update = False
     rate_data = None
-    MAX_AGE_MINUTES = 5
+    MAX_AGE_MINUTES = settings.get('RATES_TTL_SECONDS', 300) / 60
 
     if key in rates:
         rate_data = rates[key]
