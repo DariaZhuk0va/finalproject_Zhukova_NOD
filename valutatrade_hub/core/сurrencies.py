@@ -1,3 +1,7 @@
+from valutatrade_hub.core.exceptions import (
+CurrencyNotFoundError
+)
+
 class Currency:
     """Базовый класс для валют с публичными атрибутами"""
     
@@ -63,7 +67,7 @@ def get_currency(code: str) -> Currency:
     _currencies["ETH"] = Currency("Ethereum", "ETH")
 
     if code not in _currencies:
-        raise CurrencyNotFoundError(f"Валюта '{code}' не найдена")
+        raise CurrencyNotFoundError(code)
     
     return _currencies[code]
 

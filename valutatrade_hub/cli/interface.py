@@ -16,6 +16,12 @@ from valutatrade_hub.core.constants import (
     PORTFOLIOS_FILE
 )
 
+from valutatrade_hub.core.exceptions import (
+InvalidAmountError,
+InvalidName,
+InvalidPassword
+)
+
 def register_command(username: str, password: str):
     """
     Регистрация нового пользователя
@@ -29,10 +35,12 @@ def register_command(username: str, password: str):
     """
     # 1. Проверка входных данных
     if not username or not username.strip():
-        return False, "Имя пользователя не может быть пустым"
+        message = InvalidName()
+        return False, message
     
     if len(password) < 4:
-        return False, "Пароль должен быть не короче 4 символов"
+        message = InvalidPassword()
+        return False, message
     
     # 2. Проверка уникальности username
     users = load_json(USERS_FILE)
@@ -89,10 +97,12 @@ def login_command(username: str, password: str):
     """
     # 1. Проверка входных данных
     if not username or not username.strip():
-        return {}, "Имя пользователя не может быть пустым"
+        message = InvalidName()
+        return {}, message
     
     if len(password) < 4:
-        return {}, "Пароль должен быть не короче 4 символов"
+        message = InvalidPassword()
+        return {}, message
     
     # 2. Загрузка пользователей
     users = load_json(USERS_FILE)
@@ -215,7 +225,8 @@ def buy_command(session_data, currency: str, amount: float):
         return False, "'amount' должен быть числом"
     
     if amount <= 0:
-        return False, "'amount' должен быть положительным числом"
+        message = InvalidAmountError(amount)
+        return False, message
     
     # 3. Валидация валюты
     currency = currency.upper().strip()
@@ -312,7 +323,8 @@ def sell_command(session_data, currency: str, amount: float):
         return False, "'amount' должен быть числом"
     
     if amount <= 0:
-        return False, "'amount' должен быть положительным числом"
+        message = InvalidAmountError(amount)
+        return False, message
     
     # Валидация валюты
     currency = currency.upper().strip()

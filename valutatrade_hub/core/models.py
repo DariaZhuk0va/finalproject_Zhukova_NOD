@@ -3,6 +3,19 @@ from datetime import datetime
 import json
 import os
 
+from valutatrade_hub.core.constants import (
+    RATES_FILE,
+    USERS_FILE,
+    PORTFOLIOS_FILE
+)
+
+from valutatrade_hub.core.exceptions import (
+InsufficientFundsError,
+WalletNotFoundError,
+InvalidAmountError,
+InvalidName,
+InvalidPassword
+)
 
 class User:
     """Класс пользователя"""
@@ -34,12 +47,12 @@ class User:
     def _validate_username(self, username: str):
         """Проверяет имя пользователя"""
         if not username or len(username.strip()) == 0:
-            raise ValueError("Имя пользователя не может быть пустым")
+            raise InvalidName
     
     def _validate_password(self, password: str):
         """Проверяет пароль"""
         if len(password) < 4:
-            raise ValueError("Пароль должен быть не короче 4 символов")
+            raise InvalidPassword
     
     @property
     def user_id(self) -> int:
@@ -149,7 +162,7 @@ class Wallet:
         if not isinstance(value, (int, float)):
             raise TypeError("Баланс должен быть числом")
         if value < 0:
-            raise ValueError("Баланс не может быть отрицательным")
+            raise InvalidAmountError(value)
         self._balance = value
     
     def deposit(self, amount: float) -> None:
@@ -157,7 +170,7 @@ class Wallet:
         if not isinstance(amount, (int, float)):
             raise TypeError("Сумма должна быть числом")
         if amount <= 0:
-            raise ValueError("Сумма пополнения должна быть положительной")
+            raise InvalidAmountError(amount)
         self.balance += amount
     
     def withdraw(self, amount: float) -> None:
@@ -165,9 +178,13 @@ class Wallet:
         if not isinstance(amount, (int, float)):
             raise TypeError("Сумма должна быть числом")
         if amount <= 0:
-            raise ValueError("Сумма снятия должна быть положительной")
+            raise InvalidAmountError(amount)
         if amount > self.balance:
-            raise ValueError(f"Недостаточно средств: доступно {self.balance} {self.currency_code}, требуется {amount} {self.currency_code}")
+            raise InsufficientFundsError(
+                currency_code=self.currency_code,
+                available=self.balance,
+                required=amount
+            )
         self.balance -= amount
     
     def get_balance_info(self) -> None:
@@ -198,7 +215,6 @@ class Portfolio:
     
     def _load_exchange_rates(self) -> dict:
         """Загружает курсы валют из файла data/rates.json"""
-        RATES_FILE = "data/rates.json"
         
         # Если файла нет, создаем с базовыми курсами
         if not os.path.exists(RATES_FILE):
@@ -260,7 +276,7 @@ class Portfolio:
     def get_wallet(self, currency_code: str):
         """Возвращает объект Wallet по коду валюты"""
         if currency_code not in self._wallets:
-            raise ValueError(f"Кошелёк с валютой {currency_code} не найден")
+            raise WalletNotFoundError(currency_code)
         return self._wallets[currency_code]
     
     def get_total_value(self, base_currency: str = "USD") -> float:

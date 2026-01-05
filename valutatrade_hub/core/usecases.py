@@ -18,6 +18,7 @@ from valutatrade_hub.core.utils import (
 print_help
 )
 
+
 def run():
     """
     Главная функция с основным циклом программы.
@@ -59,7 +60,7 @@ def run():
                     print_help()
 
                 case "register":
-                    if len(args) == 5 and COMMAND_POSITION + 1 == '--username' and COMMAND_POSITION + 3 == '--password':
+                    if len(args) == 5 and args[COMMAND_POSITION + 1] == '--username' and args[COMMAND_POSITION + 3] == '--password':
                         USERNAME_POSITION = COMMAND_POSITION + 2
                         PASSWORD_POSITION = COMMAND_POSITION + 4
                         username = args[USERNAME_POSITION]
@@ -70,7 +71,7 @@ def run():
                         print('Неверный формат команды')
                         print('Правильный формат: register --username <username> --password <password>')  
                 case "login":
-                    if len(args) == 5 and COMMAND_POSITION + 1 == '--username' and COMMAND_POSITION + 3 == '--password':
+                    if len(args) == 5 and args[COMMAND_POSITION + 1] == '--username' and args[COMMAND_POSITION + 3] == '--password':
                         USERNAME_POSITION = COMMAND_POSITION + 2
                         PASSWORD_POSITION = COMMAND_POSITION + 4
                         username = args[USERNAME_POSITION]
@@ -92,7 +93,7 @@ def run():
                     port, message = show_portfolio_command(session_data, base,)
                     print(message)
                 case "buy":
-                    if len(args) == 5 and COMMAND_POSITION + 1 == '--currency' and COMMAND_POSITION + 3 == '--amount':
+                    if len(args) == 5 and args[COMMAND_POSITION + 1] == '--currency' and args[COMMAND_POSITION + 3] == '--amount':
                         BASE_POSITION = COMMAND_POSITION + 2
                         AMOUNT_POSITION = COMMAND_POSITION + 4
                         base = args[BASE_POSITION]
@@ -106,7 +107,7 @@ def run():
                         print('Неверный формат команды')
                         print('Правильный формат: buy --currency <currency> --amount <amount>')  
                 case "sell":
-                    if len(args) == 5 and COMMAND_POSITION + 1 == '--currency' and COMMAND_POSITION + 3 == '--amount':
+                    if len(args) == 5 and args[COMMAND_POSITION + 1] == '--currency' and args[COMMAND_POSITION + 3] == '--amount':
                         BASE_POSITION = COMMAND_POSITION + 2
                         AMOUNT_POSITION = COMMAND_POSITION + 4
                         base = args[BASE_POSITION]
@@ -120,7 +121,7 @@ def run():
                         print('Неверный формат команды')
                         print('Правильный формат: sell --currency <currency> --amount <amount>') 
                 case "get-rate":
-                    if len(args) == 5 and COMMAND_POSITION + 1 == '--from' and COMMAND_POSITION + 3 == '--to':
+                    if len(args) == 5 and args[COMMAND_POSITION + 1] == '--from' and args[COMMAND_POSITION + 3] == '--to':
                         FROM_POSITION = COMMAND_POSITION + 2
                         TO_POSITION = COMMAND_POSITION + 4
                         from_rate = args[FROM_POSITION]
