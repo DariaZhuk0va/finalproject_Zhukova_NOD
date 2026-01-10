@@ -58,14 +58,15 @@ class SettingsLoader:
             'DEFAULT_BASE_CURRENCY': 'USD',
             
             # Настройки логов
-            'LOG_FILE': 'valutatrade.log',
+            'LOG_DIR': 'logs',
             'LOG_LEVEL': 'INFO',
-            'LOG_FORMAT': '%(asctime)s - %(levelname)s - %(message)s',
             
             # Список поддерживаемых валют
             'SUPPORTED_CURRENCIES': ['USD', 'EUR', 'RUB', 'BTC', 'ETH']
         }
         
+        self._create_directories()
+
         # Создаем файл конфигурации по умолчанию если его нет
         self._create_default_config()
         
@@ -75,6 +76,11 @@ class SettingsLoader:
         # Помечаем как инициализированный
         self._initialized = True
     
+    def _create_directories(self):
+        """Создает необходимые директории"""
+        os.makedirs(self._config['DATA_DIR'], exist_ok=True)
+        os.makedirs(self._config['LOG_DIR'], exist_ok=True)
+
     def _create_default_config(self):
         """Создает файл конфигурации по умолчанию если его нет"""
         config_file = self._config['CONFIG_FILE']
@@ -99,10 +105,7 @@ class SettingsLoader:
             try:
                 with open(config_file, 'r', encoding='utf-8') as f:
                     user_config = json.load(f)
-                
-                # Обновляем конфигурацию пользовательскими настройками
                 self._config.update(user_config)
-                
                 print(f"Конфигурация загружена из {config_file}")
             except json.JSONDecodeError:
                 print(f"Ошибка: {config_file} содержит некорректный JSON")
@@ -123,48 +126,6 @@ class SettingsLoader:
             Значение конфигурации или default
         """
         return self._config.get(key, default)
-    
-    def reload(self):
-        """Перезагрузить конфигурацию из файла"""
-        print("Перезагрузка конфигурации...")
-        self._initialized = False
-        self.__init__()  # Повторная инициализация
-        print("Конфигурация перезагружена")
-    
-    def save_config(self, config_dict: dict = None):
-        """
-        Сохранить текущую конфигурацию в файл.
-        
-        Args:
-            config_dict: Словарь с настройками для сохранения.
-                        Если None, сохраняется текущая конфигурация.
-        """
-        config_file = self._config['CONFIG_FILE']
-        
-        try:
-            if config_dict is None:
-                save_config = _self.config
-            else:
-                save_config = config_dict
-            
-            with open(config_file, 'w', encoding='utf-8') as f:
-                json.dump(save_config, f, indent=2, ensure_ascii=False)
-            
-            print(f"Конфигурация сохранена в {config_file}")
-            
-            # Перезагружаем конфигурацию
-            self.reload()
-            
-        except Exception as e:
-            print(f"Ошибка сохранения конфигурации: {e}")
-    
-    def show_all(self):
-        """Показать всю конфигурацию (для отладки)"""
-        print("\n=== ТЕКУЩАЯ КОНФИГУРАЦИЯ ===")
-        for key, value in sorted(self._config.items()):
-            if not key.startswith('_'):  # Показываем только публичные ключи
-                print(f"{key}: {value}")
-
 
 # Создаем глобальный экземпляр при импорте модуля
 # Это гарантирует единственный экземпляр во всем приложении

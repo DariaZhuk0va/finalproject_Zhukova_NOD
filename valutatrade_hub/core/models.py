@@ -244,9 +244,7 @@ class Portfolio:
         return self._wallets.copy()
     
     def add_currency(self, currency_code: str, initial_balance: float = 0.0) -> None:
-        """Добавляет новый кошелёк в портфель"""
-        from models import Wallet
-        
+        """Добавляет новый кошелёк в портфель"""        
         if currency_code in self._wallets:
             raise ValueError(f"Кошелёк с валютой {currency_code} уже существует")
         
