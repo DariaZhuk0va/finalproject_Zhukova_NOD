@@ -11,10 +11,11 @@ from valutatrade_hub.core.exceptions import (
     InvalidPassword,
 )
 from valutatrade_hub.core.models import Portfolio, User
-from valutatrade_hub.core.utils import convert_rates, is_rate_fresh
+from valutatrade_hub.core.utils import convert_rates
 from valutatrade_hub.decorators import log_buy, log_login, log_register, log_sell
 from valutatrade_hub.infra.database import db
 from valutatrade_hub.infra.settings import settings
+from valutatrade_hub.parser_service.updater import RatesUpdater
 
 
 @log_register(verbose=True)
@@ -184,12 +185,27 @@ def show_user_portfolio(session_data, base_currency: str = "USD"):
         return {"success": True, "message": f"Портфель пользователя '{username}' пуст"}
 
     try:
-        exchange_rates = db.load(RATES_FILE)
+        exchange_rates_data = db.load(RATES_FILE)
+        
+        # Извлекаем курсы 
+        exchange_rates = {}
+        if isinstance(exchange_rates_data, dict):
+            if "pairs" in exchange_rates_data:
+                pairs = exchange_rates_data.get("pairs", {})
+                for pair_key, pair_data in pairs.items():
+                    if isinstance(pair_data, dict):
+                        exchange_rates[pair_key] = pair_data.get("rate", 0)
+                    else:
+                        exchange_rates[pair_key] = pair_data
+            else:
+                exchange_rates = exchange_rates_data
+        
         if not exchange_rates:
             return {"success": False, "message": "Курсы валют не загружены"}
+            
     except Exception:
         return {"success": False, "message": "Ошибка при загрузке курсов валют"}
-
+    
     lines = [
         f"Портфель пользователя '{session_data['username']}' (база: {base_currency}):"
     ]
@@ -242,7 +258,21 @@ def buy_currency(session_data, currency: str, amount: float):
     currency_code = currency_obj.code
 
     # Получение курса
-    rates = db.load(RATES_FILE)
+    rates_data = db.load(RATES_FILE)
+    
+    # Извлекаем курсы из нового формата
+    rates = {}
+    if isinstance(rates_data, dict):
+        if "pairs" in rates_data:
+            pairs = rates_data.get("pairs", {})
+            for pair_key, pair_data in pairs.items():
+                if isinstance(pair_data, dict):
+                    rates[pair_key] = pair_data.get("rate", 0)
+                else:
+                    rates[pair_key] = pair_data
+        else:
+            rates = rates_data
+    
     if currency_code == "USD":
         rate = 1.0
         base_currency = "USD"
@@ -371,11 +401,25 @@ def sell_currency(session_data, currency: str, amount: float):
         raise InvalidAmountError(amount)
 
     # Валидация валюты
-    currency_obj = get_currency(currency)  # Бросает CurrencyNotFoundError
+    currency_obj = get_currency(currency)  
     currency_code = currency_obj.code
     
     # Получение курса
-    rates = db.load(RATES_FILE)
+    rates_data = db.load(RATES_FILE)
+    
+    # Извлекаем курсы из нового формата
+    rates = {}
+    if isinstance(rates_data, dict):
+        if "pairs" in rates_data:
+            pairs = rates_data.get("pairs", {})
+            for pair_key, pair_data in pairs.items():
+                if isinstance(pair_data, dict):
+                    rates[pair_key] = pair_data.get("rate", 0)
+                else:
+                    rates[pair_key] = pair_data
+        else:
+            rates = rates_data
+    
     # Если продаем USD, то курс всегда 1:1
     if currency_code == "USD":
         rate = 1.0
@@ -505,97 +549,214 @@ def get_exchange_rate(from_currency: str, to_currency: str):
         to_code = to_currency_obj.code
 
         # Загрузка текущих курсов
-        rates = db.load(RATES_FILE)
+        rates_data = db.load(RATES_FILE)
+        last_refresh = rates_data.get("last_refresh")
+    
+        if last_refresh != "unknown":
+            try:
+                dt = datetime.fromisoformat(last_refresh.replace("Z", "+00:00"))
+                now = datetime.now()
+                time_diff = (now - dt).total_seconds()
+            
+                if time_diff > settings.get("RATES_TTL_SECONDS", 300):
+                    try:
+                        from valutatrade_hub.parser_service.updater import RatesUpdater
+                        updater = RatesUpdater()
+                        result = updater.run_update()
+                        if result.get("success"):
+                            rates_data = db.load(RATES_FILE)  
+                    except Exception as update_error:
+                        pass
+            except Exception as time_error:
+                pass
+
+        # Извлекаем курсы из нового формата
+        rates = {}
+        if isinstance(rates_data, dict):
+            if "pairs" in rates_data:
+                # Новый формат: {"pairs": {"BTC_USD": {"rate": ..., ...}, ...}}
+                pairs = rates_data.get("pairs", {})
+                for pair_key, pair_data in pairs.items():
+                    if isinstance(pair_data, dict):
+                        rates[pair_key] = pair_data.get("rate", 0)
+                    else:
+                        rates[pair_key] = pair_data
+            else:
+                # Старый формат: {"BTC_USD": 59337.21, ...}
+                rates = rates_data
 
         BASE = settings.get("DEFAULT_BASE_CURRENCY", 'USD')
-        key = f"{from_code}_{to_code}"
+        
+        # Проверяем наличие курсов
+        direct_key = f"{from_code}_{to_code}"
         reverse_key = f"{to_code}_{from_code}"
-        if from_code != BASE and to_code != BASE:
-            key = f"{from_code}_{BASE}"
-
-        # Проверяем свежесть курса
-        needs_update = False
-        rate_data = None
-        MAX_AGE_MINUTES = settings.get("RATES_TTL_SECONDS", 300) / 60
-
-        if key in rates:
-            rate_data = rates[key]
-            if isinstance(rate_data, dict):
-                updated_at = rate_data.get("updated_at")
-                if not is_rate_fresh(updated_at, MAX_AGE_MINUTES):
-                    needs_update = True
+        base_key_from = f"{from_code}_{BASE}"
+        base_key_to = f"{to_code}_{BASE}"
+        
+        rate = None
+        updated_at = "unknown"
+        
+        # 1. Проверяем прямой курс
+        if direct_key in rates:
+            rate = rates[direct_key]
+            # Получаем время обновления если есть
+            if isinstance(rates_data, dict) and "pairs" in rates_data:
+                pair_data = rates_data["pairs"].get(direct_key, {})
+                if isinstance(pair_data, dict):
+                    updated_at = pair_data.get("updated_at", "unknown")
+        
+        # 2. Проверяем обратный курс
         elif reverse_key in rates:
-            rate_data = rates[reverse_key]
-            if isinstance(rate_data, dict):
-                updated_at = rate_data.get("updated_at")
-                if not is_rate_fresh(updated_at, MAX_AGE_MINUTES):
-                    needs_update = True
-        else:
-            needs_update = True
-
-        # Обновляем курс если нужно
-        if needs_update:
-            print(f"Обновление курса {from_currency}→{to_currency}...")
-
-            # Заглушка для реального API вызова
-            result = convert_rates(from_currency, to_currency, rates)
-            rate = result['result']
-            message = result['message']
-            if rate == 0:
-                return message
-            else:
-                reverse_rate = 1 / rate
-            
-            
-            """
-            # Обновляем кеш
-        if key not in rates:
-            rates[key] = {}
+            reverse_rate = rates[reverse_key]
+            if reverse_rate != 0:
+                rate = 1 / reverse_rate
+                # Получаем время обновления если есть
+                if isinstance(rates_data, dict) and "pairs" in rates_data:
+                    pair_data = rates_data["pairs"].get(reverse_key, {})
+                    if isinstance(pair_data, dict):
+                        updated_at = pair_data.get("updated_at", "unknown")
         
-        if isinstance(rates[key], dict):
-            rates[key]["rate"] = new_rate
-            rates[key]["updated_at"] = new_updated_at
+        # 3. Пытаемся через базовую валюту (USD)
+        elif base_key_from in rates and base_key_to in rates:
+            rate_from = rates[base_key_from]
+            rate_to = rates[base_key_to]
+            if rate_to != 0:
+                rate = rate_from / rate_to
+                # Берем самое свежее время обновления
+                if isinstance(rates_data, dict) and "pairs" in rates_data:
+                    pair_data_from = rates_data["pairs"].get(base_key_from, {})
+                    if isinstance(pair_data_from, dict):
+                        updated_at = pair_data_from.get("updated_at", "unknown")
         
-        # Обновляем last_refresh
-        rates["last_refresh"] = datetime.now().isoformat()
+        if rate is None or rate == 0:
+            raise ApiRequestError(f"Курс {from_code}→{to_code} недоступен")
         
-        # Сохраняем обновленные курсы
-        save_json(RATES_FILE, rates)
+        # Если время обновления неизвестно, берем общее время
+        if updated_at == "unknown" and isinstance(rates_data, dict):
+            updated_at = rates_data.get("last_refresh", "unknown")
         
-        rate = new_rate
-        updated_at = new_updated_at
-        source_info = " (только что обновлено)"
-"""
-        else:
-            # Используем существующий курс
-            result = convert_rates(from_currency, to_currency, rates)
-            rate = result['result']
-            message = result['message']
-            if rate == 0:
-                return message
-            else:
-                reverse_rate = 1 / rate
-
         # Форматируем результат
+        reverse_rate = 1 / rate if rate != 0 else 0
+        
+        # Форматируем время
         try:
             dt = datetime.fromisoformat(updated_at.replace("Z", "+00:00"))
             time_str = dt.strftime("%Y-%m-%d %H:%M:%S")
         except Exception:
             time_str = str(updated_at)
-
-        if rate:
-            reverse_rate = 1 / rate if rate != 0 else 0
-            message = f"Курс {from_code}→{to_code}: {rate:.8f}\n"
-            message += f"Обновлено: {time_str}\n"
-            message += (
-                    f"Обратный курс {to_code}→{from_code}: {reverse_rate:.6f}"
-                )
-            return {"success": True, "message": message}
-
-        raise ApiRequestError(f"Курс {from_code}→{to_code} недоступен")
+        
+        message = f"Курс {from_code}→{to_code}: {rate:.8f}\n"
+        message += f"Обновлено: {time_str}\n"
+        message += f"Обратный курс {to_code}→{from_code}: {reverse_rate:.6f}"
+        
+        return {"success": True, "message": message}
     
     except (ValueError, CurrencyNotFoundError, ApiRequestError) as e:
         return {"success": False, "message": str(e)}
     except Exception as e:
         return {"success": False, "message": f"Ошибка при получении курса: {str(e)}"}
+    
+def update_rates(source=None):
+    """Use case для обновления курсов валют"""
+    try:
+        print("Starting rates update...")
+        
+        updater = RatesUpdater()
+        result = updater.run_update(source=source)
+        
+        return result
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "message": str(e),
+            "errors": [str(e)]
+        }
+
+
+def show_rates(currency=None, top=None, base="USD"):
+    """Use case для показа курсов из кеша"""
+    try:
+        rates_data = db.load(RATES_FILE)
+        
+        if not rates_data or "pairs" not in rates_data:
+            return {
+                "success": False,
+                "message": ("Локальный кеш курсов пуст. Выполните 'update-rates', "
+                "чтобы загрузить данные."),
+                "rates": []
+            }
+        
+        pairs = rates_data.get("pairs", {})
+        last_refresh = rates_data.get("last_refresh", "unknown")
+        
+        # Фильтрация по валюте
+        filtered_rates = {}
+        if currency:
+            currency = currency.upper()
+            for pair_key, pair_data in pairs.items():
+                if currency in pair_key:
+                    if isinstance(pair_data, dict):
+                        filtered_rates[pair_key] = pair_data.get("rate", 0)
+                    else:
+                        filtered_rates[pair_key] = pair_data
+            
+            if not filtered_rates:
+                return {
+                    "success": False,
+                    "message": f"Курс для '{currency}' не найден в кеше.",
+                    "rates": []
+                }
+        else:
+            for pair_key, pair_data in pairs.items():
+                if isinstance(pair_data, dict):
+                    filtered_rates[pair_key] = pair_data.get("rate", 0)
+                else:
+                    filtered_rates[pair_key] = pair_data
+        
+        if base != "USD":
+            result = convert_rates(base, currency, rates_data)
+            key_base = f'{currency}_{base}'
+            base_rate = result['result']
+            if base_rate == 0:
+                return {
+                    "success": False,
+                    "message": result['message'],
+                    "rates": []
+                }
+            else:
+                filtered_rates = {}
+                filtered_rates[key_base] = base_rate
+
+
+
+        # Сортировка
+        sorted_rates = sorted(filtered_rates.items(), key=lambda x: x[1], reverse=True)
+        
+        # Ограничение топом
+        if top:
+            sorted_rates = sorted_rates[:top]
+        
+        # Форматирование результата
+        rates_list = []
+        for pair_key, rate in sorted_rates:
+            rates_list.append({
+                "pair": pair_key,
+                "rate": rate
+            })
+        
+        return {
+            "success": True,
+            "rates": rates_list,
+            "count": len(rates_list),
+            "last_refresh": last_refresh,
+            "message": f"Найдено {len(rates_list)} курсов в кеше"
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "message": str(e),
+            "rates": []
+        }
 

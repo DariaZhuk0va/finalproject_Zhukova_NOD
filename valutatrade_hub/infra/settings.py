@@ -59,7 +59,14 @@ class SettingsLoader:
             "LOG_DIR": "logs",
             "LOG_LEVEL": "INFO",
             # Список поддерживаемых валют
-            "SUPPORTED_CURRENCIES": ["USD", "EUR", "RUB", "BTC", "ETH"],
+            "SUPPORTED_CURRENCIES": [
+                "EUR", "GBP", "JPY", "CHF", "CAD", "AUD", "CNY", "HKD", 
+                "SGD", "SEK", "NOK", "KRW", "NZD", "INR", "BRL", "RUB", 
+                "ZAR", "MXN", "TRY", "PLN", "THB", "IDR", "HUF", "CZK", 
+                "ILS", "CLP", "PHP", "AED", "COP", "SAR", "MYR", "RON",
+                "BTC", "ETH", "BNB", "XRP", "SOL", "DOGE", "ADA", 
+                "AVAX", "DOT", "TRX"
+                ],
         }
 
         self._create_directories()

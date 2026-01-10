@@ -10,6 +10,8 @@ from valutatrade_hub.cli.interface import (
     register_command,
     sell_command,
     show_portfolio_command,
+    show_rates_command,
+    update_rates_command,
 )
 from valutatrade_hub.core.constants import COMMAND_POSITION
 from valutatrade_hub.core.utils import initialize_files, print_help
@@ -104,8 +106,8 @@ def run():
                     session_data = {}
 
                 case "show-portfolio":
-                    BASE_POSITION = COMMAND_POSITION + 2
-                    if len(args) == 3:
+                    if len(args) == 3 and args[COMMAND_POSITION + 1] == "--base":
+                        BASE_POSITION = COMMAND_POSITION + 2
                         base = args[BASE_POSITION]
                         result = show_portfolio_command(session_data, base)
                         print(result["message"])
@@ -181,7 +183,55 @@ def run():
                             "Правильный формат: get-rate --from "
                             "<currency> --to <currency>"
                         )
-
+                case "update-rates":
+                    if len(args) == 3 and args[COMMAND_POSITION + 1] == "--source":
+                        SOURCE_POSITION = COMMAND_POSITION + 2
+                        source = args[SOURCE_POSITION]
+                        if source not in ["coingecko", "exchangerate"]:
+                            print("Неверный источник. Допустимые значения: "
+                                  "coingecko, exchangerate")
+                        else:
+                            result = update_rates_command(source=source)
+                            print(result["message"])
+                    elif len(args) == 1:
+                        result = update_rates_command()
+                        print(result["message"])
+                    else:
+                        print("Неверный формат команды")
+                        print(
+                            "Правильный формат: update-rates "
+                            "[--source <coingecko|exchangerate>]"
+                        )               
+                case "show-rates":
+                    currency = None
+                    top = None
+                    base = "USD"
+                    
+                    i = 1
+                    while i < len(args):
+                        if args[i] == "--currency" and i + 1 < len(args):
+                            currency = args[i + 1]
+                            i += 2
+                        elif args[i] == "--top" and i + 1 < len(args):
+                            try:
+                                top = int(args[i + 1])
+                                if top <= 0:
+                                    print("Значение --top должно быть "
+                                          "положительным числом")
+                                    top = None
+                            except ValueError:
+                                print("Значение --top должно быть числом")
+                            i += 2
+                        elif args[i] == "--base" and i + 1 < len(args):
+                            base = args[i + 1]
+                            i += 2
+                        else:
+                            print(f"Неизвестный аргумент: {args[i]}")
+                            break
+                    
+                    result = show_rates_command(currency=currency, top=top, base=base)
+                    print(result["message"])
+                
                 case _:
                     print(f"Функции '{command}' нет. Попробуйте снова.")
                     print("Введите 'help' для просмотра доступных команд.")
