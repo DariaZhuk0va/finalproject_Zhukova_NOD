@@ -41,8 +41,11 @@ data/
 */data/
 **/data/
 
-# Игнорировать файл метаданных
-db_meta.json
+# Игнорировать папку logs со всеми файлами
+logs/
+*/logs/
+**/logs/
+
 
 # macOS system files
 .DS_Store
