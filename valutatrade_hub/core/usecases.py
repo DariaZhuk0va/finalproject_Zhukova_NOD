@@ -11,7 +11,7 @@ from valutatrade_hub.core.exceptions import (
     InvalidPassword,
 )
 from valutatrade_hub.core.models import Portfolio, User
-from valutatrade_hub.core.utils import is_rate_fresh, convert_rates
+from valutatrade_hub.core.utils import convert_rates, is_rate_fresh
 from valutatrade_hub.decorators import log_buy, log_login, log_register, log_sell
 from valutatrade_hub.infra.database import db
 from valutatrade_hub.infra.settings import settings

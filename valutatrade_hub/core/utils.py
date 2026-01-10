@@ -1,11 +1,15 @@
-from datetime import datetime, timedelta
-import os
 import json
+import os
+from datetime import datetime, timedelta
 
-from valutatrade_hub.infra.settings import settings
-from valutatrade_hub.core.constants import DATA_DIR, PORTFOLIOS_FILE, RATES_FILE, USERS_FILE
-from valutatrade_hub.infra.database import db
+from valutatrade_hub.core.constants import (
+    DATA_DIR,
+    PORTFOLIOS_FILE,
+    RATES_FILE,
+    USERS_FILE,
+)
 from valutatrade_hub.core.currencies import get_currency
+from valutatrade_hub.infra.settings import settings
 
 
 def initialize_files():
@@ -123,6 +127,6 @@ def convert_rates(from_currency, to_currency, rates):
         rate_curr = exchange_rates[from_key].get("rate", 0)
         rate = rate_curr / rate_base
     else:
-        return {"result": 0, "message": f"Курс для {currency}→USD не найден"}
+        return {"result": 0, "message": f"Курс для {from_key}→{to_key} не найден"}
     
     return {"result": rate, "message": "Успешно"}
