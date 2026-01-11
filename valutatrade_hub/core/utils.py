@@ -2,6 +2,8 @@ import json
 import os
 from datetime import datetime, timedelta
 
+from prettytable import PrettyTable
+
 from valutatrade_hub.core.constants import (
     DATA_DIR,
     PORTFOLIOS_FILE,
@@ -161,3 +163,71 @@ def convert_rates(from_currency, to_currency, rates):
         return {"result": 0, "message": f"Курс для {from_code}→{to_code} не найден"}
     
     return {"result": rate, "message": "Успешно"}
+
+def create_portfolio_table(wallets_data, total, base, username):
+    """Создает таблицу портфеля (возвращает строку)"""
+    table = PrettyTable()
+    table.field_names = ["Валюта", "Баланс", f"В {base}"]
+    
+    for wallet in wallets_data:
+        currency = wallet['currency']
+        balance = wallet['balance']
+        value = wallet['value']
+        table.add_row([currency, f"{balance:.4f}", f"{value:.2f}"])
+    
+    table.add_row(["", "", ""])
+    table.add_row(["ИТОГО", "", f"{total:.2f} {base}"])
+    
+    return str(table)
+
+def create_rates_table(rates_list, last_refresh):
+    """Создает таблицу курсов (возвращает строку)"""
+    if not rates_list:
+        return "Нет данных"
+    
+    table = PrettyTable()
+    table.field_names = ["Пара", "Курс"]
+    
+    for rate in rates_list:
+        try:
+            rate_converted = rate['rate']
+            rate_converted = float(rate_converted)
+        except Exception:
+            raise ValueError ('Неверный формат')
+        table.add_row([rate['pair'], f"{rate_converted:.6f}"])
+    
+    return f"Курсы ({last_refresh}):\n{table}"
+
+def create_rate_table(from_curr, to_curr, rate, updated_at):
+    """Таблица одного курса"""
+    table = PrettyTable()
+    try:
+        rate = float(rate)
+    except Exception:
+        raise ValueError ('Неверный формат')
+    table.field_names = ["Параметр", "Значение"]
+    
+    table.add_row(["Пара", f"{from_curr} → {to_curr}"])
+    table.add_row(["Курс", f"{rate:.8f}"])
+    table.add_row(["Обратный", f"{1/rate:.8f}" if rate != 0 else "0"])
+    table.add_row(["Обновлено", updated_at])
+    
+    return str(table)
+
+def create_transaction_table(op_type, currency, amount, rate, cost, old_bal, new_bal):
+    """Таблица транзакции"""
+    table = PrettyTable()
+    table.field_names = ["Параметр", "Значение"]
+    
+    op_name = "ПОКУПКА" if op_type == "buy" else "ПРОДАЖА"
+    cost_name = "Стоимость" if op_type == "buy" else "Выручка"
+    
+    table.add_row(["Операция", op_name])
+    table.add_row(["Валюта", currency])
+    table.add_row(["Количество", f"{amount:.4f}"])
+    table.add_row(["Курс USD", f"{rate:.2f}"])
+    table.add_row([cost_name, f"{cost:.2f} USD"])
+    table.add_row(["Было", f"{old_bal:.4f}"])
+    table.add_row(["Стало", f"{new_bal:.4f}"])
+    
+    return str(table)

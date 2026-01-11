@@ -1,9 +1,12 @@
 [tool.poetry]
 name = "finalproject--zhukova-dpo-nod"
 version = "0.1.0"
-description = ""
+description = "CLI приложение для торговли валютами и криптовалютой"
 authors = ["Daria Zhukova <isaevadv@gmail.com>"]
 readme = "README.md"
+license = "MIT"
+repository = "https://github.com/DariaZhuk0va/finalproject_Zhukova_NOD"
+homepage = "https://github.com/DariaZhuk0va/finalproject_Zhukova_NOD"
 
 packages = [
     { include = "valutatrade_hub" },
@@ -16,6 +19,9 @@ prettytable = "<3.10"
 python-dotenv = "^1.0.0"
 requests = "^2.31.0"
 
+[tool.poetry.group.dev.dependencies]
+ruff = ">=0.14.3,<0.15.0"
+
 [tool.poetry.scripts]
 project = "main:main"
 
@@ -26,16 +32,10 @@ exclude = ["venv", ".venv", "dist", "__pycache__"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I"]
-ignore = [] 
+ignore = []
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
-
-[dependency-groups]
-dev = [
-    "ruff (>=0.14.3,<0.15.0)"
-]
-
 
 

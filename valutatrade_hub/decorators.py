@@ -26,7 +26,8 @@ def log_action_decorator(operation_name, verbose=False):
                     log_action(operation_name, **log_data)
                     return result
 
-                log_data["result"] = "OK" if result.get("success") else "ERROR"
+                success = result.get("success", False)
+                log_data["result"] = "OK" if success else "ERROR"
 
                 # Извлекаем данные из result['data']
                 if "data" in result:
@@ -36,7 +37,6 @@ def log_action_decorator(operation_name, verbose=False):
                         log_data["user"] = data["username"]
 
                     if operation_name in ["BUY", "SELL"]:
-                        # Важно: currency_code а не currency
                         log_data["currency_code"] = data.get("currency", "unknown")
                         log_data["amount"] = data.get("amount", 0)
                         log_data["rate"] = data.get("rate", 0.0)
@@ -59,7 +59,11 @@ def log_action_decorator(operation_name, verbose=False):
                         log_data["user"] = args[0].get("username", "unknown")
 
                 # Логируем действие
-                log_action(operation_name, **log_data)
+                if success:
+                    log_action(operation_name, **log_data)  # ← actions.log
+                else:
+                    log_error(operation_name, **log_data)   # ← errors.log
+                
                 return result
 
             except Exception as e:

@@ -253,22 +253,40 @@ class Portfolio:
 
     def get_total_value(self, base_currency: str = "USD") -> float:
         """Возвращает общую стоимость всех валют в базовой валюте"""
-        if base_currency not in self._exchange_rates:
-            raise ValueError(f"Курс для валюты {base_currency} не найден")
-
+        rates_data = db.load(RATES_FILE)
+        pairs = rates_data.get("pairs", {}) if isinstance(rates_data, dict) else {}
+    
         total_value = 0.0
 
         for currency_code, wallet in self._wallets.items():
-            if currency_code not in self._exchange_rates:
-                print(f"Курс для {currency_code} не найден, пропускаем")
-                continue
-
-            # Конвертируем в базовую валюту
             if currency_code == base_currency:
                 total_value += wallet.balance
+                continue
+            
+        # Ищем курс для конвертации
+            rate_key = f"{currency_code}_{base_currency}"
+            if rate_key in pairs:
+                pair_data = pairs[rate_key]
+                rate = (pair_data.get("rate", 0) 
+                        if isinstance(pair_data, dict) else pair_data)
             else:
-                value_in_base = wallet.balance * self._exchange_rates[currency_code]
-                total_value += value_in_base
+                # Пробуем обратный курс
+                reverse_key = f"{base_currency}_{currency_code}"
+                if reverse_key in pairs:
+                    pair_data = pairs[reverse_key]
+                    reverse_rate = (pair_data.get("rate", 0) 
+                                    if isinstance(pair_data, dict) else pair_data)
+                    rate = 1 / reverse_rate if reverse_rate != 0 else 0
+                else:
+                    print(f"Курс для {currency_code}→{base_currency} "
+                          "не найден, пропускаем")
+                    continue
+        
+            if rate == 0:
+                print(f"Нулевой курс для {currency_code}→{base_currency}, пропускаем")
+                continue
+            
+            total_value += wallet.balance * rate
 
         return round(total_value, 2)
 

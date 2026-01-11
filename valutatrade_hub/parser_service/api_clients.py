@@ -138,7 +138,6 @@ class ExchangeRateApiClient(BaseApiClient):
             
             # Отправляем GET-запрос
             response = requests.get(url, timeout=config.REQUEST_TIMEOUT)
-            print(response)
             
             # Проверяем статус-код
             if response.status_code != 200:
@@ -229,12 +228,6 @@ class ApiClientManager:
         }
         
         history["requests"].append(log_entry)
-        
-        # Ограничиваем историю последними 100 запросами
-        if len(history["requests"]) > 100:
-            history["requests"] = history["requests"][-100:]
-        
-        db.save(self.history_filename, history)
     
     def get_cache_stats(self):
         """Получить статистику кэша"""

@@ -206,32 +206,50 @@ def show_user_portfolio(session_data, base_currency: str = "USD"):
     except Exception:
         return {"success": False, "message": "Ошибка при загрузке курсов валют"}
     
-    lines = [
-        f"Портфель пользователя '{session_data['username']}' (база: {base_currency}):"
-    ]
+    lines = []
+    portfolio_items = [] 
     total = 0
 
     for currency, wallet in wallets.items():
         balance = wallet["balance"]
-
+        
         if currency == base_currency:
             value = balance
+            rate = 1.0
         else:
             result = convert_rates(currency, base_currency, exchange_rates)
             rate = result['result']
             message = result['message']
             if rate == 0:
-                return message
+                return {"success": False, "message": message}
             else:
                 value = balance * rate
-
+        
         total += value
         lines.append(f"- {currency}: {balance:.4f} → {value:.2f} {base_currency}")
+        
+        portfolio_items.append({
+            "currency": currency,
+            "balance": balance,
+            "rate": rate,
+            "value": value,
+            "base_currency": base_currency
+        })
 
     lines.append("-" * 40)
     lines.append(f"ИТОГО: {total:,.2f} {base_currency}")
 
-    return {"success": True, "message": "\n".join(lines)}
+    return {
+        "success": True, 
+        "message": "\n".join(lines),
+        "data": {
+            "username": session_data['username'],
+            "portfolio_items": portfolio_items,
+            "total": total,
+            "base_currency": base_currency,
+            "lines": lines  
+        }
+    }
 
 
 @log_buy(verbose=True)
@@ -366,8 +384,19 @@ def buy_currency(session_data, currency: str, amount: float):
                 "cost_usd": cost_usd,
                 "wallet_before": wallet_before,
                 "wallet_after": wallet_after,
+                "table_data": {
+                    "operation": "Покупка",
+                    "currency": currency,
+                    "amount": f"{amount:.4f}",
+                    "rate": f"{rate:.4f}",
+                    "total_usd": f"{cost_usd:,.2f}",
+                    "balance_before": f"{old_balance:.4f}",
+                    "balance_after": f"{new_balance:.4f}",
+                    "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                },
             },
         }
+
 
     except (InvalidAmountError,
             CurrencyNotFoundError,
@@ -508,6 +537,17 @@ def sell_currency(session_data, currency: str, amount: float):
                 "cost_usd": cost_usd,
                 "wallet_before": wallet_before,
                 "wallet_after": wallet_after,
+                "operation": "sell", 
+                "table_data": {
+                    "operation": "Продажа",
+                    "currency": currency,
+                    "amount": f"{amount:.4f}",
+                    "rate": f"{rate:.4f}",
+                    "total_usd": f"{cost_usd:,.2f}",
+                    "balance_before": f"{old_balance:.4f}",
+                    "balance_after": f"{new_balance:.4f}",
+                    "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                },
             },
         }
 
@@ -636,14 +676,42 @@ def get_exchange_rate(from_currency: str, to_currency: str):
         try:
             dt = datetime.fromisoformat(updated_at.replace("Z", "+00:00"))
             time_str = dt.strftime("%Y-%m-%d %H:%M:%S")
+            dt_obj = dt  # сохраняем объект datetime
         except Exception:
             time_str = str(updated_at)
-        
+            dt_obj = None
+    
         message = f"Курс {from_code}→{to_code}: {rate:.8f}\n"
         message += f"Обновлено: {time_str}\n"
         message += f"Обратный курс {to_code}→{from_code}: {reverse_rate:.6f}"
-        
-        return {"success": True, "message": message}
+    
+        return {
+            "success": True, 
+            "message": message,
+        "data": {
+            "from_currency": from_code,
+            "to_currency": to_code,
+            "pair": f"{from_code}_{to_code}",
+            "rate": rate,
+            "rate_formatted": f"{rate:.8f}",
+            "reverse_rate": reverse_rate,
+            "reverse_rate_formatted": f"{reverse_rate:.6f}",
+            "updated_at": time_str,
+            "updated_at_dt": dt_obj,
+            "table_rows": [
+                {
+                    "pair": f"{from_code} → {to_code}",
+                    "rate": f"{rate:.8f}",
+                    "updated": time_str
+                },
+                {
+                    "pair": f"{to_code} → {from_code}",
+                    "rate": f"{reverse_rate:.6f}",
+                    "updated": time_str
+                }
+            ]
+        }
+    }
     
     except (ValueError, CurrencyNotFoundError, ApiRequestError) as e:
         return {"success": False, "message": str(e)}
@@ -747,10 +815,21 @@ def show_rates(currency=None, top=None, base="USD"):
         
         # Форматирование результата
         rates_list = []
+        table_data = []
+        
         for pair_key, rate in sorted_rates:
+            from_curr, to_curr = pair_key.split("_")
             rates_list.append({
                 "pair": pair_key,
                 "rate": rate
+            })
+            
+            table_data.append({
+                "from": from_curr,
+                "to": to_curr,
+                "pair": pair_key,
+                "rate": f"{rate:.8f}",
+                "rate_value": rate  
             })
         
         return {
@@ -758,7 +837,20 @@ def show_rates(currency=None, top=None, base="USD"):
             "rates": rates_list,
             "count": len(rates_list),
             "last_refresh": last_refresh,
-            "message": f"Найдено {len(rates_list)} курсов в кеше"
+            "message": f"Найдено {len(rates_list)} курсов в кеше",
+
+            "data": {
+                "table_data": table_data,
+                "currency_filter": currency,
+                "base_currency": base,
+                "top_limit": top,
+                "last_refresh": last_refresh,
+                "summary": {
+                    "total": len(rates_list),
+                    "filtered_by": currency if currency else "all",
+                    "sorted_by": "rate (desc)"
+                }
+            }
         }
         
     except Exception as e:

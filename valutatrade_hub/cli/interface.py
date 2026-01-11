@@ -12,6 +12,12 @@ from valutatrade_hub.core.usecases import (
     show_user_portfolio,
     update_rates,
 )
+from valutatrade_hub.core.utils import (
+    create_portfolio_table,
+    create_rate_table,
+    create_rates_table,
+    create_transaction_table,
+)
 
 
 def register_command(username: str, password: str):
@@ -28,10 +34,22 @@ def buy_command(session_data, currency: str, amount: float):
     """Покупка с улучшенными сообщениями"""
     try:
         result = buy_currency(session_data, currency, amount)
-        if result["success"]:
-            # Добавляем префикс для успешной операции
-            result["message"] = "Успешно! " + result["message"]
+    
+        if result.get("success"):
+            data = result.get("data", {})
+            table = create_transaction_table(
+                "buy",
+                data.get("currency", ""),
+                data.get("amount", 0),
+                data.get("rate", 0),
+                data.get("cost_usd", 0),
+                data["wallet_before"].get(currency, 0),
+                data["wallet_after"].get(currency, 0)
+            )
+            result["message"] = table
+    
         return result
+        
     except Exception as e:
         return {
             "success": False,
@@ -43,10 +61,22 @@ def sell_command(session_data, currency: str, amount: float):
     """Продажа с улучшенными сообщениями"""
     try:
         result = sell_currency(session_data, currency, amount)
-        if result["success"]:
-            # Добавляем префикс для успешной операции
-            result["message"] = "Успешно! " + result["message"]
+    
+        if result.get("success"):
+            data = result.get("data", {})
+            table = create_transaction_table(
+               "sell",
+                data.get("currency", ""),
+                data.get("amount", 0),
+                data.get("rate", 0),
+                data.get("cost_usd", 0),
+                data["wallet_before"].get(currency, 0),
+                data["wallet_after"].get(currency, 0)
+            )
+            result["message"] = table
+    
         return result
+    
     except Exception as e:
         return {
             "success": False,
@@ -56,14 +86,48 @@ def sell_command(session_data, currency: str, amount: float):
 
 def show_portfolio_command(session_data, base_currency: str = "USD"):
     """Портфель"""
-    return show_user_portfolio(session_data, base_currency)
+    result = show_user_portfolio(session_data, base_currency)
+    if result.get("success"):
+        data = result.get("data", {})
+        if data == {}:
+            return result
+        else:
+            table = create_portfolio_table(
+                data.get("portfolio_items", {}),
+                data.get("total", 0),
+                data.get("base_currency", "USD"),
+                data.get("username", "")
+            )
+            result["message"] = table
+    
+            return result
+    return result
 
 
 def get_rate_command(from_currency: str, to_currency: str):
     """Курс с точными сообщениями об ошибках"""
     
     try:
-        return get_exchange_rate(from_currency, to_currency)
+        result = get_exchange_rate(from_currency, to_currency)
+    
+        if result.get("success"):
+            if from_currency == to_currency:
+                table = create_rate_table(
+                from_currency,
+                to_currency,
+                1,
+                'no update'
+                )
+            else:
+                data = result.get("data", {})
+                table = create_rate_table(
+                    data.get("from_currency", ""),
+                    data.get("to_currency", ""),
+                    data.get("rate", 0),
+                    data.get("updated_at", "unknown")
+                )   
+                result["message"] = table
+        return result
     except CurrencyNotFoundError as e:
         return {
             "success": False,
@@ -109,17 +173,20 @@ def update_rates_command(source=None):
 
 
 def show_rates_command(currency=None, top=None, base="USD"):
-    """Показать курсы из кеша"""
+    """
+    Показать курсы из кеша
+    """
     try:
         result = show_rates(currency, top, base)
         
         if result.get("success"):
-            lines = [f"Курсы из кеша (обновлено: {result['last_refresh']}):"]
-            for rate_info in result.get("rates", []):
-                lines.append(f"- {rate_info['pair']}: {rate_info['rate']:.6f}")
-            
-            result["message"] = "\n".join(lines)
-        
+            data = result.get("data", {})
+            table = create_rates_table(
+                data.get("table_data", []),
+                data.get("last_refresh", "unknown")
+            )
+            result["message"] = table
+
         return result
         
     except Exception as e:
