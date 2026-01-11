@@ -15,6 +15,8 @@ from valutatrade_hub.cli.interface import (
 )
 from valutatrade_hub.core.constants import COMMAND_POSITION
 from valutatrade_hub.core.utils import initialize_files, print_help
+from valutatrade_hub.parser_service.scheduler import RateScheduler
+from valutatrade_hub.infra.settings import settings
 
 
 def run():
@@ -29,6 +31,12 @@ def run():
     )
     print("Введите 'help' для просмотра доступных команд.")
     print("Введите 'exit' для выхода из программы.")
+
+    if settings.get("SCHEDULER_AUTO_START", False):
+        interval = settings.get("SCHEDULER_INTERVAL_HOURS", 6)
+        scheduler = RateScheduler(interval_hours = interval)
+        scheduler.start()
+        print(f"Автоматическое обновление запущено (интервал: {interval} ч)")
 
     session_data = {}
 
@@ -206,31 +214,49 @@ def run():
                     currency = None
                     top = None
                     base = "USD"
-                    
-                    i = 1
-                    while i < len(args):
-                        if args[i] == "--currency" and i + 1 < len(args):
-                            currency = args[i + 1]
-                            i += 2
-                        elif args[i] == "--top" and i + 1 < len(args):
-                            try:
-                                top = int(args[i + 1])
-                                if top <= 0:
-                                    print("Значение --top должно быть "
-                                          "положительным числом")
-                                    top = None
-                            except ValueError:
-                                print("Значение --top должно быть числом")
-                            i += 2
-                        elif args[i] == "--base" and i + 1 < len(args):
-                            base = args[i + 1]
-                            i += 2
+                    COMMAND_LIST = (1, 3, 5)
+                    count_cur_com = args.count('--currency')
+                    count_top_com = args.count('--top')
+                    count_base_com = args.count('--base')
+                    total_len = 0
+
+                    if len(args) == 1:
+                        result = show_rates_command()
+                        print(result["message"])
+                        continue 
+                    else:
+                        if count_cur_com in (0,1) or count_top_com in (0,1) or count_base_com in (0,1):
+                            total_len = 1 + (count_cur_com + count_top_com + count_base_com) * 2
+                        if len(args) == total_len:
+                            if count_cur_com == 1 and args.index('--currency') in COMMAND_LIST:
+                                param_position = args.index('--currency') + 1
+                                currency = args[param_position]
+                            if count_top_com == 1 and args.index('--top') in COMMAND_LIST:
+                                param_position = args.index('--top') + 1
+                                top = args[param_position]
+                                try:
+                                    top = int(top)
+                                    if top <= 0:
+                                        print("Значение --top должно быть "
+                                              "положительным числом")
+                                        continue
+                                except ValueError:
+                                    print("Значение --top должно быть числом")
+                                    continue
+                            if count_base_com == 1 and args.index('--base') in COMMAND_LIST:
+                                param_position = args.index('--base') + 1
+                                base = args[param_position]  
+                            
+                            result = show_rates_command(currency=currency, top=top, base=base)
+                            print(result["message"])
                         else:
-                            print(f"Неизвестный аргумент: {args[i]}")
-                            break
+                            print("Неверный формат команды")
+                            print(
+                                "Правильный формат: show-rates [--currency <валюта>] "
+                                "[--top <число>] [--base <валюта>]"
+                            )
+                            continue   
                     
-                    result = show_rates_command(currency=currency, top=top, base=base)
-                    print(result["message"])
                 
                 case _:
                     print(f"Функции '{command}' нет. Попробуйте снова.")

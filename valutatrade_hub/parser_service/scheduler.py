@@ -1,13 +1,13 @@
 import threading
 import time
 
-from updater import ExchangeRateUpdater
+from valutatrade_hub.parser_service.updater import RatesUpdater
 
 
 class RateScheduler:
     def __init__(self, interval_hours = 24):
         self.interval = interval_hours * 3600  # в секундах
-        self.updater = ExchangeRateUpdater()
+        self.updater = RatesUpdater()
         self.running = False
     
     def start(self):
@@ -16,7 +16,7 @@ class RateScheduler:
         print(f"Планировщик запущен. Обновление каждые {self.interval/3600} часов.")
         
         # Обновляем сразу при запуске
-        self.updater.update_rates()
+        self.updater.run_update()
         
         # Запускаем фоновый поток
         thread = threading.Thread(target=self._run)

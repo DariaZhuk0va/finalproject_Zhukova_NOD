@@ -266,12 +266,9 @@ def buy_currency(session_data, currency: str, amount: float):
         if "pairs" in rates_data:
             pairs = rates_data.get("pairs", {})
             for pair_key, pair_data in pairs.items():
-                if isinstance(pair_data, dict):
-                    rates[pair_key] = pair_data.get("rate", 0)
-                else:
-                    rates[pair_key] = pair_data
-        else:
-            rates = rates_data
+                rates[pair_key] = pair_data 
+    else:
+        rates = rates_data
     
     if currency_code == "USD":
         rate = 1.0
@@ -413,10 +410,7 @@ def sell_currency(session_data, currency: str, amount: float):
         if "pairs" in rates_data:
             pairs = rates_data.get("pairs", {})
             for pair_key, pair_data in pairs.items():
-                if isinstance(pair_data, dict):
-                    rates[pair_key] = pair_data.get("rate", 0)
-                else:
-                    rates[pair_key] = pair_data
+                rates[pair_key] = pair_data 
         else:
             rates = rates_data
     
@@ -677,6 +671,14 @@ def update_rates(source=None):
 def show_rates(currency=None, top=None, base="USD"):
     """Use case для показа курсов из кеша"""
     try:
+        if currency != None:
+            currency_obj = get_currency(currency)
+            currency = currency_obj.code
+        
+        if base != None:
+            base_obj = get_currency(base)
+            base = base_obj.code
+        
         rates_data = db.load(RATES_FILE)
         
         if not rates_data or "pairs" not in rates_data:
@@ -689,9 +691,12 @@ def show_rates(currency=None, top=None, base="USD"):
         
         pairs = rates_data.get("pairs", {})
         last_refresh = rates_data.get("last_refresh", "unknown")
-        
+        BASE = settings.get("DEFAULT_BASE_CURRENCY", 'USD')
+
         # Фильтрация по валюте
         filtered_rates = {}
+        if currency == BASE or currency == None:
+            filtered_rates[f'{BASE}_{BASE}'] = 1
         if currency:
             currency = currency.upper()
             for pair_key, pair_data in pairs.items():
@@ -714,19 +719,22 @@ def show_rates(currency=None, top=None, base="USD"):
                 else:
                     filtered_rates[pair_key] = pair_data
         
-        if base != "USD":
-            result = convert_rates(base, currency, rates_data)
-            key_base = f'{currency}_{base}'
-            base_rate = result['result']
-            if base_rate == 0:
-                return {
-                    "success": False,
-                    "message": result['message'],
-                    "rates": []
-                }
-            else:
-                filtered_rates = {}
-                filtered_rates[key_base] = base_rate
+        if base != BASE:
+            filtered_rates_copy = filtered_rates.copy()
+            filtered_rates = {}
+            for pair_key, pair_data in filtered_rates_copy.items():
+                from_currency, to_currency = pair_key.split("_")
+                result = convert_rates(base, from_currency, rates_data)
+                key_base = f'{from_currency}_{base}'
+                base_rate = result['result']
+                if base_rate == 0:
+                    return {
+                        "success": False,
+                        "message": result['message'],
+                        "rates": []
+                    }
+                else:
+                    filtered_rates[key_base] = base_rate
 
 
 

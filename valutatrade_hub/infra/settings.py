@@ -54,6 +54,8 @@ class SettingsLoader:
             "CONFIG_FILE": "valutatrade_hub/infra/config.json",  # Файл конфигурации
             # Настройки курсов
             "RATES_TTL_SECONDS": 300,  # 5 минут
+            "SCHEDULER_INTERVAL_HOURS": 6,  # Интервал планировщика
+            "SCHEDULER_AUTO_START": False,  # Автозапуск при старте
             "DEFAULT_BASE_CURRENCY": "USD",
             # Настройки логов
             "LOG_DIR": "logs",

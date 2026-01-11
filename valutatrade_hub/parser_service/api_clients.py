@@ -4,6 +4,7 @@ import requests
 
 from valutatrade_hub.core.exceptions import ApiRequestError
 from valutatrade_hub.infra.database import db
+from .storage import save_rates, load_rates
 
 from .config import ParserConfig
 
@@ -23,7 +24,7 @@ class BaseApiClient:
     
     def _get_cached_data(self, key="rates"):
         """Получить кэшированные данные"""
-        cache_data = db.load(self.cache_filename)
+        cache_data = load_rates(self.cache_filename)
         
         if key in cache_data:
             cached_item = cache_data[key]
@@ -45,7 +46,7 @@ class BaseApiClient:
             "source": self.__class__.__name__
         }
         
-        db.save(self.cache_filename, cache_data)
+        save_rates(cache_data, self.cache_filename)
     
     def fetch_rates_with_cache(self):
         """Получить курсы с использованием кэша"""
