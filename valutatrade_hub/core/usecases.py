@@ -22,13 +22,6 @@ from valutatrade_hub.parser_service.updater import RatesUpdater
 def register_user(username: str, password: str):
     """
     Регистрация нового пользователя
-
-    Args:
-        username: Имя пользователя
-        password: Пароль
-
-    Returns:
-        Кортеж (успех, сообщение)
     """
     # Проверка входных данных
     if not username or not username.strip():
@@ -88,13 +81,6 @@ def register_user(username: str, password: str):
 def login_user(username: str, password: str):
     """
     Вход пользователя в систему
-
-    Args:
-        username: Имя пользователя
-        password: Пароль
-
-    Returns:
-        Кортеж (dict, сообщение)
     """
     # Проверка входных данных
     if not username or not username.strip():
@@ -146,12 +132,6 @@ def login_user(username: str, password: str):
 def show_user_portfolio(session_data, base_currency: str = "USD"):
     """
     Показать портфель пользователя
-
-    Args:
-        base_currency: Базовая валюта конвертации
-
-    Returns:
-        Кортеж (успех, сообщение)
     """
     # Проверка, что пользователь залогинен
     if not session_data:
@@ -255,7 +235,7 @@ def show_user_portfolio(session_data, base_currency: str = "USD"):
 @log_buy(verbose=True)
 def buy_currency(session_data, currency: str, amount: float):
     """
-    Минимальная версия команды покупки
+    Функция для покупки указанной валюты.
     """
     # Проверка, что пользователь залогинен
 
@@ -410,7 +390,7 @@ def buy_currency(session_data, currency: str, amount: float):
 @log_sell(verbose=True)
 def sell_currency(session_data, currency: str, amount: float):
     """
-    Назначение: продать указанную валюту.
+    Функция для продажи указанной валюты.
     """
     # Проверка, что пользователь залогинен
 
@@ -560,7 +540,7 @@ def sell_currency(session_data, currency: str, amount: float):
 
 def get_exchange_rate(from_currency: str, to_currency: str):
     """
-    Назначение: получить текущий курс одной валюты к другой.
+    Функция для получения текущего курса одной валюты к другой.
     """
     try:
         from_currency = from_currency.upper().strip()
@@ -608,7 +588,6 @@ def get_exchange_rate(from_currency: str, to_currency: str):
         rates = {}
         if isinstance(rates_data, dict):
             if "pairs" in rates_data:
-                # Новый формат: {"pairs": {"BTC_USD": {"rate": ..., ...}, ...}}
                 pairs = rates_data.get("pairs", {})
                 for pair_key, pair_data in pairs.items():
                     if isinstance(pair_data, dict):
@@ -616,7 +595,6 @@ def get_exchange_rate(from_currency: str, to_currency: str):
                     else:
                         rates[pair_key] = pair_data
             else:
-                # Старый формат: {"BTC_USD": 59337.21, ...}
                 rates = rates_data
 
         BASE = settings.get("DEFAULT_BASE_CURRENCY", 'USD')
@@ -630,7 +608,7 @@ def get_exchange_rate(from_currency: str, to_currency: str):
         rate = None
         updated_at = "unknown"
         
-        # 1. Проверяем прямой курс
+        # Проверяем прямой курс
         if direct_key in rates:
             rate = rates[direct_key]
             # Получаем время обновления если есть
@@ -639,7 +617,7 @@ def get_exchange_rate(from_currency: str, to_currency: str):
                 if isinstance(pair_data, dict):
                     updated_at = pair_data.get("updated_at", "unknown")
         
-        # 2. Проверяем обратный курс
+        # Проверяем обратный курс
         elif reverse_key in rates:
             reverse_rate = rates[reverse_key]
             if reverse_rate != 0:
@@ -650,7 +628,7 @@ def get_exchange_rate(from_currency: str, to_currency: str):
                     if isinstance(pair_data, dict):
                         updated_at = pair_data.get("updated_at", "unknown")
         
-        # 3. Пытаемся через базовую валюту (USD)
+        # Пытаемся через базовую валюту (USD)
         elif base_key_from in rates and base_key_to in rates:
             rate_from = rates[base_key_from]
             rate_to = rates[base_key_to]
@@ -719,7 +697,7 @@ def get_exchange_rate(from_currency: str, to_currency: str):
         return {"success": False, "message": f"Ошибка при получении курса: {str(e)}"}
     
 def update_rates(source=None):
-    """Use case для обновления курсов валют"""
+    """Функция для обновления курсов валют"""
     try:
         print("Starting rates update...")
         
@@ -737,7 +715,7 @@ def update_rates(source=None):
 
 
 def show_rates(currency=None, top=None, base="USD"):
-    """Use case для показа курсов из кеша"""
+    """Функция для показа курсов из кеша"""
     try:
         if currency is not None:
             currency_obj = get_currency(currency)

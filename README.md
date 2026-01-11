@@ -1,99 +1,110 @@
 Valutatrade Hub - это консольное приложение для управления личным валютным портфелем. С помощью приложения вы можете отслеживать курсы валют и криптовалют, покупать и продавать активы, а также просматривать стоимость своего портфеля в разных валютах. Приложение получает актуальные курсы от CoinGecko (криптовалюты) и ExchangeRate-API (фиатные валюты).
 
 СТРУКТУРА КАТАЛОГОВ
-text
-valutatrade_hub/
-├── core/                    # Ядро приложения
-│   ├── constants.py        # Константы
-│   ├── currencies.py       # Управление валютами
-│   ├── exceptions.py       # Пользовательские исключения
-│   ├── models.py           # Модели данных
-│   ├── usecases.py         # Бизнес-логика
-│   └── utils.py            # Утилиты
-├── infra/                  # Инфраструктура
-│   ├── config.json         # Конфигурация
-│   ├── database.py         # Работа с JSON БД
-│   └── settings.py         # Настройки
-├── parser_service/         # Сервис парсинга курсов
-│   ├── api_clients.py      # API клиенты
-│   ├── config.py           # Конфигурация парсера
-│   ├── storage.py          # Хранение курсов
-│   ├── updater.py          # Обновление курсов
-│   └── scheduler.py        # Планировщик обновлений
-├── cli/                    # Интерфейс командной строки
-│   └── interface.py        # CLI команды
-├── decorators.py           # Декораторы логирования
-├── logging_config.py       # Конфигурация логирования
-├── main.py                 # Точка входа
-└── __init__.py
+project
+│  
+├── data/
+│    ├── users.json                       # Пользователи          
+│    ├── portfolios.json                 # Портфели       
+│    ├── rates.json                        # Локальный кэш для Core Service
+│    └── exchange_rates.json       # Хранилище Parser Service (исторические данные)            
+├── valutatrade_hub/
+│    ├── __init__.py
+│    ├── logging_config.py         
+│    ├── decorators.py            
+│    ├── core/                   # Ядро приложения
+│    │    ├── __init__.py
+│    │    ├── constants.py         # Константы
+│    │    ├── currencies.py        # Управление валютами    
+│    │    ├── exceptions.py       # Пользовательские исключения         
+│    │    ├── models.py            # Модели данных         
+│    │    ├── usecases.py        # Бизнес-логика         
+│    │    └── utils.py                 # Вспомогательные функции            
+│    ├── infra/
+│    │    ├─ __init__.py
+│    │    ├── config.json            # Конфигурация  
+│    │    ├── settings.py            # Настройки          
+│    │    └── database.py          # Работа с JSON БД         
+│    ├── parser_service/
+│    │    ├── __init__.py
+│    │    ├── config.py                # Конфигурация API и параметров обновления
+│    │    ├── api_clients.py         # Работа с внешними API
+│    │    ├── updater.py              # Основной модуль обновления курсов
+│    │    ├── storage.py              # Операции чтения/записи exchange_rates.json
+│    │    └── scheduler.py           # Планировщик периодического обновления
+│    └── cli/
+│         ├─ __init__.py
+│         └─ interface.py                    # CLI команды     
+│
+├── main.py                                   # Точка входа
+├── Makefile
+├── poetry.lock
+├── pyproject.toml
+├── README.md
+└── .gitignore                
 
-data/                       # Данные (создается автоматически)
-├── users.json              # Пользователи
-├── portfolios.json         # Портфели
-├── rates.json              # Курсы валют
-└── logs/                   # Логи приложения
-    ├── actions.log         # Логи действий
-    └── errors.log          # Логи ошибок
+УПРАВЛЕНИЕ ПРОЕКТОМ
 
-
-Установка
 Установка зависимостей:
-bash
 make install
 или
-
-bash
 poetry install
+
 Запуск:
-bash
 make run
 или
-
-bash
 poetry run project
+
 Сборка пакета:
-bash
 make build
 или
-
-bash
 poetry build
+
 Публикация (тестовый режим):
-bash
 make publish
 или
-
-bash
 poetry publish --dry-run
+
 Установка пакета локально:
-bash
 make package-install
 или
-
-bash
 python3 -m pip install dist/*.whl
+
 Проверка кода:
-bash
 make lint
 или
-
-bash
 poetry run ruff check .
-Примеры команд CLI
-Регистрация и вход
-bash
+
+УПРАВЛЕНИЕ ПОРТФЕЛЕМ
+
+Доступные команды:
+
+● Регистрация и вход
+
 # Регистрация нового пользователя
-register --username alice --password securepass123
+register --username <имя_пользователя> --password <пароль>
 
 # Вход в систему
-login --username alice --password securepass123
-Управление курсами валют
-bash
+login --username <имя_пользователя> --password <пароль>
+
+Примеры: 
+register --username demo_user --password demo123
+login --username demo_user --password demo123
+
+# Выход из системы
+logout
+
+● Управление курсами валют
+
 # Обновить курсы валют
-update-rates
+update-rates [--source <coingecko | exchangerate>]
 
 # Показать все курсы
-show-rates
+show-rates [--currency <валюта>] [--top <число>] [--base <валюта>]
+
+Примеры:
+# Обновить фиатные курсы
+update-rates --source exchangerate
 
 # Показать топ-10 курсов
 show-rates --top 10
@@ -105,31 +116,46 @@ show-rates --currency EUR
 # Получить курс между двумя валютами
 get-rate --from BTC --to USD
 get-rate --from EUR --to RUB
-Операции с портфелем
-bash
-# Показать портфель в USD
+
+● Операции с портфелем
+
+# Показать портфель (по умолчанию в USD)
 show-portfolio
 
 # Показать портфель в другой валюте
-show-portfolio --base EUR
-show-portfolio --base RUB
+show-portfolio --base <валюта>
 
 # Купить валюту
-buy --currency BTC --amount 0.5
-buy --currency EUR --amount 1000
+buy --currency <валюта> --amount <количество>
 
 # Продать валюту
-sell --currency USD --amount 500
-sell --currency ETH --amount 2.0
-Система кэширования и TTL
+sell --currency <валюта> --amount <количество>
+
+Примеры:
+buy --currency BTC --amount 0.1
+buy --currency EUR --amount 200
+get-rate --from BTC --to USD
+sell --currency BTC --amount 0.05
+
+
+ОБЩИЕ КОМАНДЫ
+
+● Справка
+  Команда: help
+  Показывает список доступных команд и примеры использования.
+
+● Выход
+  Команда: exit
+  Завершает работу программы.
+
+СИСТЕМА КЭШИРОВАНИЯ И TTL
+
 Кэширование курсов валют
+
 Приложение использует интеллектуальное кэширование курсов валют:
-
-Кэширование API запросов: Результаты API запросов к CoinGecko и ExchangeRate-API кэшируются локально
-
-TTL (Time To Live): По умолчанию курсы кэшируются на 5 минут (300 секунд)
-
-Автоматическое обновление: При запросе курса проверяется время последнего обновления, если данные устарели - выполняется автоматическое обновление
+● Кэширование API запросов: Результаты API запросов к CoinGecko и ExchangeRate-API кэшируются локально
+● TTL (Time To Live): По умолчанию курсы кэшируются на 5 минут (300 секунд)
+● Автоматическое обновление: При запросе курса проверяется время последнего обновления, если данные устарели - выполняется автоматическое обновление
 
 Настройка TTL
 TTL настраивается в файле конфигурации valutatrade_hub/infra/config.json:
@@ -152,94 +178,41 @@ text
 
 >>> get-rate --from BTC --to USD
 # После 5 минут - данные устарели, получаем свежие из API
-Включение Parser Service и хранение API ключа
+
+
+ВКЛЮЧЕНИЕ Parser Service И ХРАНЕНИЕ API КЛЮЧА
+
 1. Получение API ключа
+
 Для работы с фиатными валютами нужен API ключ от ExchangeRate-API:
-
-Перейдите на сайт: https://app.exchangerate-api.com/
-
-Зарегистрируйтесь бесплатно (до 1500 запросов в месяц)
-
-Получите ваш API ключ
+- Перейдите на сайт: https://app.exchangerate-api.com/
+- Зарегистрируйтесь бесплатно (до 1500 запросов в месяц)
+- Получите ваш API ключ
 
 2. Настройка API ключа
+
 Создайте файл .env в корневой директории проекта:
 
-bash
 # .env файл
 EXCHANGERATE_API_KEY=ваш_ключ_здесь
+
 3. Запуск Parser Service
 Parser Service включается автоматически при выполнении команд:
 
-bash
 # Запускает обновление курсов
 update-rates
 
 # Или принудительное обновление из конкретного источника
 update-rates --source coinmarketcap
 update-rates --source exchangerate-api
-4. Автоматическое обновление
-Для периодического обновления курсов можно использовать планировщик:
 
-python
-# Пример запуска планировщика (каждые 6 часов)
-from valutatrade_hub.parser_service.scheduler import create_scheduler
-scheduler = create_scheduler(interval_hours=6)
-scheduler.start()
-5. Просмотр статистики кэша
-bash
+4. Просмотр статистики кэша
+
 # Приложение автоматически ведет статистику кэширования
 # Данные сохраняются в data/exchange_rates.json
-Демонстрация работы
-Пример сессии работы
-text
-$ poetry run project
->>> register --username investor --password invest123
-Пользователь 'investor' зарегистрирован (id=1). Войдите: login --username investor --password ****
 
->>> login --username investor --password invest123
-Вы вошли как 'investor'
+БЕЗОПАСНОСТЬ
 
->>> update-rates
-Starting rates update...
-Fetching from CoinGecko... OK (10 rates)
-Fetching from ExchangeRate-API... OK (32 rates)
-Update successful. Total rates updated: 42
-
->>> show-rates --top 5
-+----------+----------+----------------+
-|   From   |    To    |      Rate      |
-+----------+----------+----------------+
-|   BTC    |   USD    |   59337.21     |
-|   ETH    |   USD    |    3720.00     |
-|   EUR    |   USD    |     1.0786     |
-|   GBP    |   USD    |     1.2642     |
-|   JPY    |   USD    |    0.00638     |
-+----------+----------+----------------+
-
->>> buy --currency USD --amount 1000
-Покупка выполнена: 1000.0000 USD по курсу 1.00 USD/USD
-
->>> buy --currency BTC --amount 0.1
-Покупка выполнена: 0.1000 BTC по курсу 59337.21 USD/BTC
-
->>> show-portfolio
-+----------+----------+--------------+------------------+
-| Валюта   | Баланс   | Курс к USD   | Стоимость в USD  |
-+----------+----------+--------------+------------------+
-| USD      | 1000.00  |     1.00     |     1000.00      |
-| BTC      |   0.10   |   59337.21   |     5933.72      |
-+----------+----------+--------------+------------------+
-ИТОГО: 6,933.72 USD
-
->>> get-rate --from BTC --to EUR
-Курс BTC→EUR: 55023.45678901
-Обновлено: 2025-10-09 12:30:45
-Обратный курс EUR→BTC: 0.00001817
-
->>> exit
-Особенности системы
-Безопасность
 Пароли хранятся в хешированном виде с использованием SHA-256 и соли
 
 Сессии пользователей управляются через безопасные токены
@@ -263,4 +236,116 @@ Update successful. Total rates updated: 42
 
 Криптовалюты: BTC, ETH, BNB, XRP, SOL, DOGE, ADA, AVAX, DOT, TRX
 
-Valutatrade Hub - простое и мощное решение для управления вашим валютным портфелем прямо из терминала!
+ПРИМЕР СЕССИИ РАБОТЫ
+
+Добро пожаловать на Платформу для отслеживания и симуляции торговли валютами!
+
+Введите 'help' для просмотра доступных команд.
+Введите 'exit' для выхода из программы.
+
+
+>>>Введите команду: register --username demo_user --password demo123
+Пользователь 'demo_user' зарегистрирован (id=1). Войдите: login --username demo_user --password ****
+
+>>>Введите команду: login --username demo_user --password demo123
+Вы вошли как 'demo_user'
+
+>>>Введите команду: show-portfolio
+Портфель пользователя 'demo_user' пуст
+
+>>>Введите команду: update-rates
+Starting rates update...
+Starting rates update...
+Fetching from CoinGecko... OK (10 rates)
+Fetching from ExchangeRate-API... OK (32 rates)
+Writing 42 rates to rates.json...
+Update successful. Total rates updated: 42
+Обновление успешно. Обновлено 42 курсов | Последнее обновление: 2026-01-11T20:46:34.079355
+
+>>>Введите команду: buy --currency BTC --amount 0.1
++------------+-------------+
+|  Параметр  |   Значение  |
++------------+-------------+
+|  Операция  |   ПОКУПКА   |
+|   Валюта   |     BTC     |
+| Количество |    0.1000   |
+|  Курс USD  |   90817.00  |
+| Стоимость  | 9081.70 USD |
+|    Было    |    0.0000   |
+|   Стало    |    0.1000   |
++------------+-------------+
+
+>>>Введите команду: buy --currency EUR --amount 200
++------------+------------+
+|  Параметр  |  Значение  |
++------------+------------+
+|  Операция  |  ПОКУПКА   |
+|   Валюта   |    EUR     |
+| Количество |  200.0000  |
+|  Курс USD  |    1.16    |
+| Стоимость  | 232.80 USD |
+|    Было    |   0.0000   |
+|   Стало    |  200.0000  |
++------------+------------+
+
+>>>Введите команду: show-portfolio
++--------+----------+-------------+
+| Валюта |  Баланс  |    В USD    |
++--------+----------+-------------+
+|  BTC   |  0.1000  |   9081.70   |
+|  EUR   | 200.0000 |    232.80   |
+|        |          |             |
+| ИТОГО  |          | 9314.50 USD |
++--------+----------+-------------+
+
+>>>Введите команду: get-rate --from BTC --to USD
++-----------+---------------------+
+|  Параметр |       Значение      |
++-----------+---------------------+
+|    Пара   |      BTC → USD      |
+|    Курс   |    90817.00000000   |
+|  Обратный |      0.00001101     |
+| Обновлено | 2026-01-11 20:46:34 |
++-----------+---------------------+
+
+>>>Введите команду: sell --currency BTC --amount 0.05
++------------+-------------+
+|  Параметр  |   Значение  |
++------------+-------------+
+|  Операция  |   ПРОДАЖА   |
+|   Валюта   |     BTC     |
+| Количество |    0.0500   |
+|  Курс USD  |   90817.00  |
+|  Выручка   | 4540.85 USD |
+|    Было    |    0.1000   |
+|   Стало    |    0.0500   |
++------------+-------------+
+
+>>>Введите команду: show-portfolio --base EUR
++--------+----------+-------------+
+| Валюта |  Баланс  |    В EUR    |
++--------+----------+-------------+
+|  BTC   |  0.0500  |   3901.04   |
+|  EUR   | 200.0000 |    200.00   |
+|        |          |             |
+| ИТОГО  |          | 4101.04 EUR |
++--------+----------+-------------+
+
+>>>Введите команду: logout
+Вы вышли из аккаунта
+
+>>>Введите команду: exit
+До свидания!
+
+
+ДЕМОНСТРАЦИЯ РАБОТЫ
+
+Демонстрация работы полного цикла программы:
+https://asciinema.org/a/AnBjh98JknsfKoAK
+
+Демонстрация работы с валютами:
+https://asciinema.org/a/z5hVV9gvTjOLYfgG
+
+Демонстрация обработок ошибок:
+https://asciinema.org/a/RDZWtmdafUZfiUrz
+

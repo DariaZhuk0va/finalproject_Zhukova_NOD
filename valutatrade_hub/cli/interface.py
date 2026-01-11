@@ -1,5 +1,5 @@
 """
-CLI интерфейс - простые обертки с улучшенными сообщениями
+CLI интерфейс 
 """
 from valutatrade_hub.core.exceptions import ApiRequestError, CurrencyNotFoundError
 from valutatrade_hub.core.usecases import (
@@ -31,7 +31,7 @@ def login_command(username: str, password: str):
 
 
 def buy_command(session_data, currency: str, amount: float):
-    """Покупка с улучшенными сообщениями"""
+    """Покупка"""
     try:
         result = buy_currency(session_data, currency, amount)
     
@@ -58,7 +58,7 @@ def buy_command(session_data, currency: str, amount: float):
 
 
 def sell_command(session_data, currency: str, amount: float):
-    """Продажа с улучшенными сообщениями"""
+    """Продажа"""
     try:
         result = sell_currency(session_data, currency, amount)
     
@@ -105,7 +105,7 @@ def show_portfolio_command(session_data, base_currency: str = "USD"):
 
 
 def get_rate_command(from_currency: str, to_currency: str):
-    """Курс с точными сообщениями об ошибках"""
+    """Показать курс"""
     
     try:
         result = get_exchange_rate(from_currency, to_currency)
