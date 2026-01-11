@@ -559,9 +559,9 @@ def get_exchange_rate(from_currency: str, to_currency: str):
                         result = updater.run_update()
                         if result.get("success"):
                             rates_data = db.load(RATES_FILE)  
-                    except Exception as update_error:
+                    except Exception:
                         pass
-            except Exception as time_error:
+            except Exception:
                 pass
 
         # Извлекаем курсы из нового формата
@@ -671,11 +671,11 @@ def update_rates(source=None):
 def show_rates(currency=None, top=None, base="USD"):
     """Use case для показа курсов из кеша"""
     try:
-        if currency != None:
+        if currency is not None:
             currency_obj = get_currency(currency)
             currency = currency_obj.code
         
-        if base != None:
+        if base is not None:
             base_obj = get_currency(base)
             base = base_obj.code
         
@@ -695,7 +695,7 @@ def show_rates(currency=None, top=None, base="USD"):
 
         # Фильтрация по валюте
         filtered_rates = {}
-        if currency == BASE or currency == None:
+        if currency == BASE or currency is None:
             filtered_rates[f'{BASE}_{BASE}'] = 1
         if currency:
             currency = currency.upper()

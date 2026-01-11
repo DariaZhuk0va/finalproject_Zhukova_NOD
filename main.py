@@ -15,8 +15,8 @@ from valutatrade_hub.cli.interface import (
 )
 from valutatrade_hub.core.constants import COMMAND_POSITION
 from valutatrade_hub.core.utils import initialize_files, print_help
-from valutatrade_hub.parser_service.scheduler import RateScheduler
 from valutatrade_hub.infra.settings import settings
+from valutatrade_hub.parser_service.scheduler import RateScheduler
 
 
 def run():
@@ -225,13 +225,18 @@ def run():
                         print(result["message"])
                         continue 
                     else:
-                        if count_cur_com in (0,1) or count_top_com in (0,1) or count_base_com in (0,1):
-                            total_len = 1 + (count_cur_com + count_top_com + count_base_com) * 2
+                        if (count_cur_com in (0,1) or 
+                                count_top_com in (0,1) or 
+                                count_base_com in (0,1)):
+                            total_len = 1 + (count_cur_com + count_top_com 
+                                                                + count_base_com) * 2
                         if len(args) == total_len:
-                            if count_cur_com == 1 and args.index('--currency') in COMMAND_LIST:
+                            if (count_cur_com == 1 and 
+                                    args.index('--currency') in COMMAND_LIST):
                                 param_position = args.index('--currency') + 1
                                 currency = args[param_position]
-                            if count_top_com == 1 and args.index('--top') in COMMAND_LIST:
+                            if (count_top_com == 1 and
+                                    args.index('--top') in COMMAND_LIST):
                                 param_position = args.index('--top') + 1
                                 top = args[param_position]
                                 try:
@@ -243,11 +248,14 @@ def run():
                                 except ValueError:
                                     print("Значение --top должно быть числом")
                                     continue
-                            if count_base_com == 1 and args.index('--base') in COMMAND_LIST:
+                            if (count_base_com == 1 and 
+                                    args.index('--base') in COMMAND_LIST):
                                 param_position = args.index('--base') + 1
                                 base = args[param_position]  
                             
-                            result = show_rates_command(currency=currency, top=top, base=base)
+                            result = show_rates_command(currency = currency,
+                                                        top = top,
+                                                        base = base)
                             print(result["message"])
                         else:
                             print("Неверный формат команды")

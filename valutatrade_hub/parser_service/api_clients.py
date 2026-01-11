@@ -4,9 +4,9 @@ import requests
 
 from valutatrade_hub.core.exceptions import ApiRequestError
 from valutatrade_hub.infra.database import db
-from .storage import save_rates, load_rates
 
 from .config import ParserConfig
+from .storage import load_rates, save_rates
 
 config = ParserConfig()
 
@@ -133,7 +133,8 @@ class ExchangeRateApiClient(BaseApiClient):
         
         try:
             # Формируем URL с API-ключом
-            url = f"{config.EXCHANGERATE_API_URL}/{config.EXCHANGERATE_API_KEY}/latest/{config.BASE_CURRENCY}"
+            url = (f"{config.EXCHANGERATE_API_URL}/{config.EXCHANGERATE_API_KEY}/"
+                   f"latest/{config.BASE_CURRENCY}")
             
             # Отправляем GET-запрос
             response = requests.get(url, timeout=config.REQUEST_TIMEOUT)
@@ -156,12 +157,13 @@ class ExchangeRateApiClient(BaseApiClient):
             
             # Приводим к стандартному формату
             rates = {}
+            BASE = config.BASE_CURRENCY
             for currency in config.FIAT_CURRENCIES:
                 if currency in api_rates:
                     rate_usd_to_currency = api_rates[currency]
                     if rate_usd_to_currency > 0:
                         rate_currency_to_usd = 1 / rate_usd_to_currency
-                        rates[f"{currency}_{config.BASE_CURRENCY}"] = rate_currency_to_usd
+                        rates[f"{currency}_{BASE}"] = rate_currency_to_usd
         
             return rates
             

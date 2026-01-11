@@ -1,9 +1,9 @@
 import os
 from dataclasses import dataclass
 
-from valutatrade_hub.infra.settings import settings
 from dotenv import load_dotenv
 
+from valutatrade_hub.infra.settings import settings
 
 load_dotenv()
 
